@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | AthletiSync{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h2>{{ settings.district_name }}</h2>
+    <p class="muted">School year {{ settings.default_school_year_label }} · Poll every {{ settings.polling_interval_minutes }} minutes</p>
+  </div>
+  <form method="post" action="/sync/run">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button" type="submit">Sync Now</button>
+  </form>
+</section>
+
+<section class="stats-grid">
+  <article class="card"><h3>Schools</h3><p>{{ schools|length }}</p></article>
+  <article class="card"><h3>Mappings</h3><p>{{ mappings|length }}</p></article>
+  <article class="card"><h3>Calendars</h3><p>{{ calendars|length }}</p></article>
+  <article class="card"><h3>Last Sync</h3><p>{{ latest_run.started_at if latest_run else "Never" }}</p></article>
+</section>
+
+<section class="grid-2">
+  <article class="card">
+    <h3>Recent Sync Runs</h3>
+    <table>
+      <thead><tr><th>Started</th><th>Status</th><th>Created</th><th>Updated</th><th>Errors</th></tr></thead>
+      <tbody>
+        {% for run in recent_runs %}
+        <tr>
+          <td>{{ run.started_at }}</td>
+          <td>{{ run.status }}</td>
+          <td>{{ run.created_count }}</td>
+          <td>{{ run.updated_count }}</td>
+          <td>{{ run.error_count }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">No sync runs yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+  <article class="card">
+    <h3>Mapping Warnings</h3>
+    <ul class="plain-list">
+      {% for mapping in mappings if not mapping.google_calendar_id %}
+      <li>Mapping {{ mapping.id }} does not have a calendar destination.</li>
+      {% else %}
+      <li>No incomplete mappings detected.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+{% endblock %}

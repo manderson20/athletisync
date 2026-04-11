@@ -1,0 +1,8 @@
+# Changelog
+
+## 0.1.0 - 2026-04-11
+
+- Initial AthletiSync MVP scaffold.
+- Added FastAPI application with session authentication, CSRF helpers, admin UI, and HTMX-ready templates.
+- Added SQLAlchemy models, Alembic migration bootstrap, APScheduler integration, sync engine abstractions, and initial MSHSAA/Google Calendar service layers.
+- Added Docker, Compose, environment example, documentation, and pytest coverage for core sync behavior.

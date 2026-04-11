@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Mappings | AthletiSync{% endblock %}
+{% block content %}
+<section class="page-header"><h2>Sync Mappings</h2></section>
+<section class="grid-2">
+  <article class="card">
+    <h3>Create Mapping</h3>
+    <form method="post" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>School Year
+        <select name="school_year_id" required>
+          {% for item in school_years %}<option value="{{ item.id }}">{{ item.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>School
+        <select name="school_id" required>
+          {% for item in schools %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Sport
+        <select name="sport_id">
+          <option value="">General</option>
+          {% for item in sports %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Level
+        <select name="level_id">
+          <option value="">General</option>
+          {% for item in levels %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Google Calendar
+        <select name="google_calendar_id">
+          <option value="">Unassigned</option>
+          {% for item in calendars %}<option value="{{ item.id }}">{{ item.display_name }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Sync Behavior <input name="sync_behavior" value="standard"></label>
+      <label>Notes <textarea name="notes"></textarea></label>
+      <label class="checkbox"><input type="checkbox" name="enabled" checked> Enabled</label>
+      <button class="button" type="submit">Save Mapping</button>
+    </form>
+  </article>
+  <article class="card">
+    <h3>Existing Mappings</h3>
+    <table>
+      <thead><tr><th>Year</th><th>School</th><th>Sport</th><th>Level</th><th>Calendar</th><th>Enabled</th></tr></thead>
+      <tbody>
+        {% for mapping in mappings %}
+        <tr>
+          <td>{{ mapping.school_year.label }}</td>
+          <td>{{ mapping.school.name }}</td>
+          <td>{{ mapping.sport.name if mapping.sport else "General" }}</td>
+          <td>{{ mapping.level.name if mapping.level else "General" }}</td>
+          <td>{{ mapping.google_calendar.display_name if mapping.google_calendar else "Unassigned" }}</td>
+          <td>{{ "Yes" if mapping.enabled else "No" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">No mappings configured.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+</section>
+{% endblock %}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login | AthletiSync</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+  </head>
+  <body class="auth-body">
+    <section class="auth-card">
+      <h1>AthletiSync</h1>
+      <p class="muted">District admin login</p>
+      {% if error %}
+      <div class="banner error">{{ error }}</div>
+      {% endif %}
+      <form method="post" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>Username <input name="username" required></label>
+        <label>Password <input name="password" type="password" required></label>
+        <button class="button" type="submit">Login</button>
+      </form>
+    </section>
+  </body>
+</html>

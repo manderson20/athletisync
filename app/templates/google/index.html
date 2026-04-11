@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Google Calendars | AthletiSync{% endblock %}
+{% block content %}
+<section class="page-header"><h2>Google Calendar Destinations</h2></section>
+<section class="grid-2">
+  <article class="card">
+    <h3>Add Auth Profile</h3>
+    <form method="post" action="/google/profiles" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Name <input name="name" required></label>
+      <label>Service Account JSON <textarea name="service_account_json" rows="8" required></textarea></label>
+      <button class="button" type="submit">Save Profile</button>
+    </form>
+  </article>
+  <article class="card">
+    <h3>Add Calendar</h3>
+    <form method="post" action="/google/calendars" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Display Name <input name="display_name" required></label>
+      <label>Calendar ID <input name="calendar_id" required></label>
+      <label>Auth Profile
+        <select name="auth_profile_id">
+          <option value="">None</option>
+          {% for item in profiles %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="button" type="submit">Save Calendar</button>
+    </form>
+  </article>
+</section>
+<section class="card">
+  <h3>Configured Profiles</h3>
+  <table>
+    <thead><tr><th>Name</th><th>Connection</th></tr></thead>
+    <tbody>
+      {% for profile in profiles %}
+      <tr>
+        <td>{{ profile.name }}</td>
+        <td>
+          <button
+            class="button secondary"
+            hx-post="/google/profiles/{{ profile.id }}/test"
+            hx-target="#google-banner"
+            hx-swap="innerHTML"
+            hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+          >Test</button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2">No auth profiles configured.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div id="google-banner"></div>
+</section>
+<section class="card">
+  <h3>Configured Calendars</h3>
+  <table>
+    <thead><tr><th>Name</th><th>Calendar ID</th><th>Profile</th></tr></thead>
+    <tbody>
+      {% for item in calendars %}
+      <tr><td>{{ item.display_name }}</td><td>{{ item.calendar_id }}</td><td>{{ item.auth_profile_id or "None" }}</td></tr>
+      {% else %}
+      <tr><td colspan="3">No calendars configured.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

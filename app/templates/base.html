@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}AthletiSync{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script defer src="{{ url_for('static', path='js/app.js') }}"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div>
+          <h1>AthletiSync</h1>
+          <p class="muted">MSHSAA to Google Calendar sync</p>
+        </div>
+        <nav>
+          <a href="/">Dashboard</a>
+          <a href="/schools">Schools</a>
+          <a href="/catalog">Sports & Levels</a>
+          <a href="/mappings">Mappings</a>
+          <a href="/google">Google</a>
+          <a href="/sync">Sync History</a>
+          <a href="/settings">Settings</a>
+        </nav>
+        {% if request.session.get("user_id") %}
+        <form method="post" action="/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="button secondary" type="submit">Logout</button>
+        </form>
+        {% endif %}
+      </aside>
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </body>
+</html>

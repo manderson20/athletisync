@@ -1,0 +1,1 @@
+"""AthletiSync application package."""

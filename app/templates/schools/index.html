@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Schools | AthletiSync{% endblock %}
+{% block content %}
+<section class="page-header"><h2>Schools</h2></section>
+<section class="grid-2">
+  <article class="card">
+    <h3>Add School</h3>
+    <form method="post" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Name <input name="name" required></label>
+      <label>MSHSAA External ID <input name="external_id"></label>
+      <label>MSHSAA URL <input name="mshsaa_url"></label>
+      <button class="button" type="submit">Save School</button>
+    </form>
+  </article>
+  <article class="card">
+    <h3>Configured Schools</h3>
+    <table>
+      <thead><tr><th>Name</th><th>External ID</th><th>MSHSAA URL</th></tr></thead>
+      <tbody>
+        {% for school in schools %}
+        <tr><td>{{ school.name }}</td><td>{{ school.external_id or "—" }}</td><td>{{ school.mshsaa_url or "—" }}</td></tr>
+        {% else %}
+        <tr><td colspan="3">No schools configured.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+</section>
+{% endblock %}

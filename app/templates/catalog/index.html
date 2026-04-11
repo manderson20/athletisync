@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Sports & Levels | AthletiSync{% endblock %}
+{% block content %}
+<section class="page-header"><h2>Sports and Levels</h2></section>
+<section class="grid-2">
+  <article class="card">
+    <h3>Add Sport</h3>
+    <form method="post" action="/catalog/sports" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Name <input name="name" required></label>
+      <label>Slug <input name="slug" required></label>
+      <button class="button" type="submit">Save Sport</button>
+    </form>
+  </article>
+  <article class="card">
+    <h3>Add Level</h3>
+    <form method="post" action="/catalog/levels" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Name <input name="name" required></label>
+      <label>Slug <input name="slug" required></label>
+      <button class="button" type="submit">Save Level</button>
+    </form>
+  </article>
+</section>
+<section class="grid-2">
+  <article class="card">
+    <h3>Sports</h3>
+    <table>
+      <thead><tr><th>Name</th><th>Slug</th></tr></thead>
+      <tbody>
+        {% for sport in sports %}
+        <tr><td>{{ sport.name }}</td><td>{{ sport.slug }}</td></tr>
+        {% else %}
+        <tr><td colspan="2">No sports configured.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+  <article class="card">
+    <h3>Levels</h3>
+    <table>
+      <thead><tr><th>Name</th><th>Slug</th></tr></thead>
+      <tbody>
+        {% for level in levels %}
+        <tr><td>{{ level.name }}</td><td>{{ level.slug }}</td></tr>
+        {% else %}
+        <tr><td colspan="2">No levels configured.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+</section>
+{% endblock %}

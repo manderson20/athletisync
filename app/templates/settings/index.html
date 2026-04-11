@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Settings | AthletiSync{% endblock %}
+{% block content %}
+<section class="page-header"><h2>Settings</h2></section>
+<section class="card">
+  <form method="post" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>District Name <input name="district_name" value="{{ settings.district_name }}" required></label>
+    <label>Timezone <input name="timezone" value="{{ settings.timezone }}" required></label>
+    <label>Polling Interval Minutes <input name="polling_interval_minutes" type="number" min="5" value="{{ settings.polling_interval_minutes }}" required></label>
+    <label>Default School Year <input name="default_school_year_label" value="{{ settings.default_school_year_label }}" required></label>
+    <label>Cancellation Behavior
+      <select name="cancellation_behavior">
+        <option value="mark_cancelled" {% if settings.cancellation_behavior == "mark_cancelled" %}selected{% endif %}>Mark Cancelled</option>
+        <option value="remove" {% if settings.cancellation_behavior == "remove" %}selected{% endif %}>Remove</option>
+      </select>
+    </label>
+    <label>Sync Retry Count <input name="sync_retry_count" type="number" min="0" value="{{ settings.sync_retry_count }}" required></label>
+    <label>Log Retention Days <input name="log_retention_days" type="number" min="1" value="{{ settings.log_retention_days }}" required></label>
+    <button class="button" type="submit">Save Settings</button>
+  </form>
+</section>
+{% endblock %}
