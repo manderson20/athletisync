@@ -36,6 +36,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .sidebar nav {
@@ -85,6 +89,83 @@ body {
   border-radius: 20px;
   padding: 1.25rem;
   box-shadow: var(--shadow);
+}
+
+.inset-card {
+  margin-top: 1rem;
+  background: #fcfbf7;
+  box-shadow: none;
+}
+
+.preview-slot {
+  margin-top: 1rem;
+}
+
+.source-review-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.source-list-panel,
+.source-schedule-panel {
+  min-height: 420px;
+}
+
+.source-list-panel {
+  max-height: calc(100vh - 220px);
+  overflow: hidden;
+}
+
+.activity-list {
+  display: grid;
+  gap: 0;
+  max-height: calc(100vh - 360px);
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem 0;
+}
+
+.action-row,
+.import-levels {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.grouped-row {
+  border-bottom: 1px solid #ece5d7;
+}
+
+.grouped-row:last-child {
+  border-bottom: none;
+}
+
+.grouped-row.is-selected {
+  background: rgba(17, 94, 89, 0.08);
+  border-radius: 12px;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+
+.activity-copy {
+  min-width: 0;
+}
+
+.fixed-actions {
+  justify-content: flex-end;
+}
+
+.button.compact {
+  padding: 0.45rem 0.8rem;
 }
 
 .stack {
@@ -149,6 +230,11 @@ textarea {
   color: var(--muted);
 }
 
+.version-badge {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -195,5 +281,9 @@ td {
 
   .sidebar {
     padding-bottom: 1rem;
+  }
+
+  .source-review-layout {
+    grid-template-columns: 1fr;
   }
 }

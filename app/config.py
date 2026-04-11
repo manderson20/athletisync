@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     def base_dir(self) -> Path:
         return Path(__file__).resolve().parent.parent
 
+    @computed_field
+    @property
+    def app_version(self) -> str:
+        version_file = self.base_dir / "version"
+        if version_file.exists():
+            return version_file.read_text(encoding="utf-8").strip()
+        return "0.0.0"
+
 
 @lru_cache
 def get_settings() -> Settings:

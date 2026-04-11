@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Source Review | AthletiSync{% endblock %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <h2>MSHSAA Source Review</h2>
+    <p class="muted">{{ school.name }}</p>
+  </div>
+  <a class="button secondary" href="/schools">Back to Schools</a>
+</section>
+
+<section class="card">
+  <div class="banner {{ kind }}">{{ message }}</div>
+  <p class="muted">
+    {% if school_year %}School year: {{ school_year }} · {% endif %}
+    Showing {{ activities|length }} discovered activities
+    {% if source_url %} · Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer">{{ source_url }}</a>{% endif %}
+  </p>
+</section>
+
+<section class="source-review-layout">
+  <article class="card source-list-panel">
+    <h3>Activities</h3>
+    <p class="muted">Import sports from the left pane, then inspect a selected schedule on the right.</p>
+    <div id="school-import-banner"></div>
+    <ul class="plain-list activity-list" id="activity-list">
+      {% for activity in activities %}
+      <li class="activity-row grouped-row" data-activity-id="{{ activity.external_id }}">
+        <div class="activity-copy">
+          {{ activity.name }} <span class="muted">({{ activity.external_id }})</span>
+        </div>
+        <div class="action-row fixed-actions">
+          <button
+            class="button secondary compact"
+            hx-post="/schools/{{ school.id }}/activities/import"
+            hx-target="#school-import-banner"
+            hx-swap="innerHTML"
+            hx-vals='{"csrf_token":"{{ csrf_token }}","activity_name":"{{ activity.name }}"}'
+          >Import Sport</button>
+          <button
+            class="button compact"
+            hx-post="/schools/{{ school.id }}/activities/{{ activity.external_id }}/schedule"
+            hx-target="#school-schedule-panel"
+            hx-swap="innerHTML"
+            data-activity-select="{{ activity.external_id }}"
+            hx-vals='{"csrf_token":"{{ csrf_token }}","activity_name":"{{ activity.name }}"}'
+          >View Schedule</button>
+        </div>
+      </li>
+      {% else %}
+      <li>No activities were parsed from the current page.</li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article id="school-schedule-panel" class="card source-schedule-panel">
+    <h3>Schedule Preview</h3>
+    <p class="muted">Select an activity from the left to load its schedule here.</p>
+  </article>
+</section>
+{% endblock %}

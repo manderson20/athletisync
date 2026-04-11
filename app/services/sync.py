@@ -10,6 +10,7 @@ from app.models import AppSetting, SourceEvent, SyncedEvent, SyncMapping, SyncRu
 from app.schemas import NormalizedEvent
 from app.services.google_calendar import (
     DryRunCalendarGateway,
+    GoogleCalendarGateway,
     build_event_payload,
     event_fingerprint,
 )
@@ -42,8 +43,13 @@ class SyncService:
         for mapping in mappings:
             sample_events = self._sample_events(mapping)
             for event in sample_events:
-                self._sync_event(run, mapping, event, gateway, settings.event_description_template)
+                mapping_gateway = self._gateway_for_mapping(mapping)
+                self._sync_event(run, mapping, event, mapping_gateway, settings.event_description_template)
 
+        run.summary_json = {
+            "last_completed_at": datetime.now(UTC).isoformat(),
+            "mappings_processed": len(mappings),
+        }
         run.status = "completed" if run.error_count == 0 else "completed_with_errors"
         run.completed_at = datetime.now(UTC).replace(tzinfo=None)
         self.db.commit()
@@ -64,12 +70,22 @@ class SyncService:
             )
         ]
 
+    def _gateway_for_mapping(self, mapping: SyncMapping):
+        profile = mapping.google_calendar.auth_profile if mapping.google_calendar else None
+        if profile and profile.service_account_json.strip():
+            try:
+                return GoogleCalendarGateway(profile)
+            except Exception:
+                # Runtime credential issues should not break the entire MVP when calendars are partially configured.
+                return DryRunCalendarGateway()
+        return DryRunCalendarGateway()
+
     def _sync_event(
         self,
         run: SyncRun,
         mapping: SyncMapping,
         normalized: NormalizedEvent,
-        gateway: DryRunCalendarGateway,
+        gateway,
         description_template: str,
     ) -> None:
         key = build_source_event_key(
@@ -96,36 +112,52 @@ class SyncService:
             )
             self.db.add(source_event)
             self.db.flush()
+        else:
+            source_event.title = normalized.title
+            source_event.opponent = normalized.opponent
+            source_event.location = normalized.location
+            source_event.start_at = normalized.start_at.replace(tzinfo=None) if normalized.start_at else None
+            source_event.end_at = normalized.end_at.replace(tzinfo=None) if normalized.end_at else None
+            source_event.is_all_day = normalized.is_all_day
+            source_event.status = normalized.status
+            source_event.payload = normalized.payload
+            source_event.last_seen_at = datetime.utcnow()
 
         synced = self.db.scalar(select(SyncedEvent).where(SyncedEvent.source_event_id == source_event.id))
         before_fingerprint = synced.fingerprint if synced else None
-        payload = build_event_payload(mapping, source_event, description_template)
-        google_id = gateway.upsert_event(
-            mapping.google_calendar.calendar_id if mapping.google_calendar else "dry-run-calendar",
-            synced.google_event_id if synced else None,
-            payload,
-        )
         fingerprint = event_fingerprint(source_event)
+        action = "skipped"
 
-        if synced is None:
-            synced = SyncedEvent(
-                source_event_id=source_event.id,
-                google_event_id=google_id,
-                calendar_id=mapping.google_calendar.calendar_id if mapping.google_calendar else "dry-run-calendar",
-                fingerprint=fingerprint,
-            )
-            self.db.add(synced)
-            run.created_count += 1
-            action = "created"
-        elif before_fingerprint != fingerprint:
-            synced.google_event_id = google_id
-            synced.fingerprint = fingerprint
-            synced.last_synced_at = datetime.utcnow()
-            run.updated_count += 1
-            action = "updated"
-        else:
+        if not mapping.google_calendar:
             run.skipped_count += 1
-            action = "skipped"
+            message = f"{source_event.title} skipped because the mapping has no Google Calendar destination."
+        elif synced is not None and before_fingerprint == fingerprint:
+            run.skipped_count += 1
+            message = f"{source_event.title} skipped because no changes were detected."
+        else:
+            payload = build_event_payload(mapping, source_event, description_template)
+            google_id = gateway.upsert_event(
+                mapping.google_calendar.calendar_id,
+                synced.google_event_id if synced else None,
+                payload,
+            )
+            if synced is None:
+                synced = SyncedEvent(
+                    source_event_id=source_event.id,
+                    google_event_id=google_id,
+                    calendar_id=mapping.google_calendar.calendar_id,
+                    fingerprint=fingerprint,
+                )
+                self.db.add(synced)
+                run.created_count += 1
+                action = "created"
+            else:
+                synced.google_event_id = google_id
+                synced.fingerprint = fingerprint
+                synced.last_synced_at = datetime.utcnow()
+                run.updated_count += 1
+                action = "updated"
+            message = f"{source_event.title} {action}."
 
         self.db.add(
             SyncRunItem(
@@ -133,7 +165,7 @@ class SyncService:
                 source_event_key=source_event.source_event_key,
                 action=action,
                 status="ok",
-                message=f"{source_event.title} {action}.",
+                message=message,
             )
         )
         self.db.commit()

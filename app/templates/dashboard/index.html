@@ -4,7 +4,7 @@
 <section class="page-header">
   <div>
     <h2>{{ settings.district_name }}</h2>
-    <p class="muted">School year {{ settings.default_school_year_label }} · Poll every {{ settings.polling_interval_minutes }} minutes</p>
+    <p class="muted">School year {{ settings.default_school_year_label }} · Poll every {{ settings.polling_interval_minutes }} minutes · Next scheduled sync in about {{ next_sync_minutes }} minutes</p>
   </div>
   <form method="post" action="/sync/run">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -43,11 +43,31 @@
     <h3>Mapping Warnings</h3>
     <ul class="plain-list">
       {% for mapping in mappings if not mapping.google_calendar_id %}
-      <li>Mapping {{ mapping.id }} does not have a calendar destination.</li>
+      <li>{{ mapping.school.name }} · {{ mapping.sport.name if mapping.sport else "General" }} · {{ mapping.level.name if mapping.level else "General" }} is missing a calendar destination.</li>
       {% else %}
       <li>No incomplete mappings detected.</li>
       {% endfor %}
     </ul>
   </article>
+</section>
+<section class="card">
+  <h3>Configured Mappings</h3>
+  <table>
+    <thead><tr><th>Year</th><th>School</th><th>Sport</th><th>Level</th><th>Calendar</th><th>Enabled</th></tr></thead>
+    <tbody>
+      {% for mapping in mappings %}
+      <tr>
+        <td>{{ mapping.school_year.label }}</td>
+        <td>{{ mapping.school.name }}</td>
+        <td>{{ mapping.sport.name if mapping.sport else "General" }}</td>
+        <td>{{ mapping.level.name if mapping.level else "General" }}</td>
+        <td>{{ mapping.google_calendar.display_name if mapping.google_calendar else "Unassigned" }}</td>
+        <td>{{ "Yes" if mapping.enabled else "No" }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">No mappings configured.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </section>
 {% endblock %}

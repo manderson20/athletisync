@@ -2,13 +2,17 @@
 {% block title %}Schools | AthletiSync{% endblock %}
 {% block content %}
 <section class="page-header"><h2>Schools</h2></section>
+<section class="card">
+  <h3>MSHSAA Source Setup</h3>
+  <p class="muted">Add the district's MSHSAA school page URL for each school, then use Preview Source to confirm AthletiSync can read activities from that page before creating mappings.</p>
+  <p class="muted">Use the school home page URL from MSHSAA, for example `https://www.mshsaa.org/MySchool/?s=244`. AthletiSync can follow that page to the schedule view automatically.</p>
+</section>
 <section class="grid-2">
   <article class="card">
     <h3>Add School</h3>
     <form method="post" class="stack">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label>Name <input name="name" required></label>
-      <label>MSHSAA External ID <input name="external_id"></label>
       <label>MSHSAA URL <input name="mshsaa_url"></label>
       <button class="button" type="submit">Save School</button>
     </form>
@@ -16,15 +20,20 @@
   <article class="card">
     <h3>Configured Schools</h3>
     <table>
-      <thead><tr><th>Name</th><th>External ID</th><th>MSHSAA URL</th></tr></thead>
+      <thead><tr><th>Name</th><th>MSHSAA URL</th><th>Source Check</th></tr></thead>
       <tbody>
         {% for school in schools %}
-        <tr><td>{{ school.name }}</td><td>{{ school.external_id or "—" }}</td><td>{{ school.mshsaa_url or "—" }}</td></tr>
+        <tr>
+          <td>{{ school.name }}</td>
+          <td>{{ school.mshsaa_url or "—" }}</td>
+          <td><a class="button secondary compact" href="/schools/{{ school.id }}/source">Review Source</a></td>
+        </tr>
         {% else %}
         <tr><td colspan="3">No schools configured.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    <p class="muted">Use Review Source to open a dedicated MSHSAA source page with activities on the left and schedule details on the right.</p>
   </article>
 </section>
 {% endblock %}

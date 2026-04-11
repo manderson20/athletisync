@@ -6,7 +6,11 @@ The dashboard highlights district settings, counts of schools, mappings, calenda
 
 ## Schools
 
-Store each school once, along with its MSHSAA identifiers or URLs.
+Store each school once, along with its MSHSAA identifiers or URLs. Use `Preview Source` to verify the school page can be read before mapping that school into sync destinations.
+
+## School Years
+
+Create school year records before building mappings. The default school year in settings should match one of the configured school years.
 
 ## Sync Mappings
 

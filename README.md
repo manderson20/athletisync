@@ -78,6 +78,7 @@ Each versioned change should also be recorded in `Changelog`.
 - [Architecture Overview](docs/architecture.md)
 - [Setup Guide](docs/setup.md)
 - [Environment Variables](docs/environment.md)
+- [MSHSAA Setup Guide](docs/mshsaa.md)
 - [Google Calendar Guide](docs/google-calendar.md)
 - [Admin Usage Guide](docs/admin-guide.md)
 - [Development Guide](docs/development.md)

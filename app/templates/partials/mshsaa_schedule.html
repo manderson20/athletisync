@@ -1,0 +1,39 @@
+<div class="banner {{ kind }}">{{ message }}</div>
+{% if rows %}
+<div class="card inset-card">
+  <h4>
+    Schedule Preview
+    {% if school and school.name %} · {{ school.name }}{% endif %}
+    {% if activity_name %} · {{ activity_name }}{% endif %}
+  </h4>
+  {% if schedule_url %}
+  <p class="muted">Source: <a href="{{ schedule_url }}" target="_blank" rel="noopener noreferrer">{{ schedule_url }}</a></p>
+  {% endif %}
+  <div class="import-levels">
+    {% for level_name in level_names %}
+    <button
+      class="button secondary compact"
+      hx-post="/schools/{{ school.id }}/levels/import"
+      hx-target="#school-level-banner"
+      hx-swap="innerHTML"
+      hx-vals='{"csrf_token":"{{ request.session.get("csrf_token") }}","level_name":"{{ level_name }}"}'
+    >Import {{ level_name }}</button>
+    {% endfor %}
+  </div>
+  <div id="school-level-banner"></div>
+  <table>
+    <thead><tr><th>Date</th><th>Level</th><th>Opponent / Event</th><th>Score / Time</th><th>Type</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.date or "—" }}</td>
+        <td>{{ row.level_name or row.level_id or "—" }}</td>
+        <td>{{ row.opponent or "—" }}</td>
+        <td>{{ row.score_or_time or "—" }}</td>
+        <td>{{ row.row_type or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}

@@ -20,7 +20,7 @@ def google_page(request: Request, db: Session = Depends(get_db), _user=Depends(r
         "calendars": db.scalars(select(GoogleCalendar).order_by(GoogleCalendar.display_name)).all(),
         "csrf_token": ensure_csrf_token(request),
     }
-    return request.app.state.templates.TemplateResponse("google/index.html", context)
+    return request.app.state.templates.TemplateResponse(request, "google/index.html", context)
 
 
 @router.post("/profiles")
@@ -70,6 +70,7 @@ def test_profile(profile_id: int, request: Request, db: Session = Depends(get_db
     except Exception as exc:  # pragma: no cover - UI fallback path
         ok, message = False, str(exc)
     return request.app.state.templates.TemplateResponse(
+        request,
         "partials/banner.html",
         {"request": request, "kind": "success" if ok else "error", "message": message},
     )

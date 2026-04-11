@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import get_db
 from app.dependencies import require_user
@@ -22,10 +22,20 @@ def mappings_page(request: Request, db: Session = Depends(get_db), _user=Depends
         "sports": db.scalars(select(Sport).order_by(Sport.name)).all(),
         "levels": db.scalars(select(SportLevel).order_by(SportLevel.name)).all(),
         "calendars": db.scalars(select(GoogleCalendar).order_by(GoogleCalendar.display_name)).all(),
-        "mappings": db.scalars(select(SyncMapping).order_by(SyncMapping.id.desc())).all(),
+        "mappings": db.scalars(
+            select(SyncMapping)
+            .options(
+                joinedload(SyncMapping.school_year),
+                joinedload(SyncMapping.school),
+                joinedload(SyncMapping.sport),
+                joinedload(SyncMapping.level),
+                joinedload(SyncMapping.google_calendar),
+            )
+            .order_by(SyncMapping.id.desc())
+        ).all(),
         "csrf_token": ensure_csrf_token(request),
     }
-    return request.app.state.templates.TemplateResponse("mappings/index.html", context)
+    return request.app.state.templates.TemplateResponse(request, "mappings/index.html", context)
 
 
 @router.post("")

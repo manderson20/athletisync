@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies import require_user
-from app.models import AppSetting
+from app.models import AppSetting, SchoolYear
 from app.schemas import SettingsFormData
 from app.security import ensure_csrf_token, verify_csrf
 
@@ -16,6 +16,7 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 def settings_page(request: Request, db: Session = Depends(get_db), _user=Depends(require_user)):
     settings = db.scalar(select(AppSetting)) or AppSetting()
     return request.app.state.templates.TemplateResponse(
+        request,
         "settings/index.html",
         {"request": request, "settings": settings, "csrf_token": ensure_csrf_token(request)},
     )
@@ -52,5 +53,8 @@ def save_settings(
     else:
         for key, value in payload.model_dump().items():
             setattr(settings, key, value)
+    school_year = db.scalar(select(SchoolYear).where(SchoolYear.label == payload.default_school_year_label))
+    if school_year is None:
+        db.add(SchoolYear(label=payload.default_school_year_label, is_active=True))
     db.commit()
     return RedirectResponse("/settings", status_code=303)

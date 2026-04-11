@@ -1,0 +1,39 @@
+<div class="banner {{ kind }}">{{ message }}</div>
+{% if school %}
+<div class="card inset-card">
+  <h4>MSHSAA Activity Preview{% if school.name %} · {{ school.name }}{% endif %}</h4>
+  <p class="muted">
+    {% if school_year %}School year: {{ school_year }} · {% endif %}
+    Showing {{ activities|length }} discovered activities
+    {% if source_url %} · Source: <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer">{{ source_url }}</a>{% endif %}
+  </p>
+  <ul class="plain-list activity-list">
+    {% for activity in activities %}
+    <li class="activity-row">
+      <div>
+        {{ activity.name }} <span class="muted">({{ activity.external_id }})</span>
+      </div>
+      <div class="action-row">
+        <button
+          class="button secondary compact"
+          hx-post="/schools/{{ school.id }}/activities/import"
+          hx-target="#school-import-banner"
+          hx-swap="innerHTML"
+          hx-vals='{"csrf_token":"{{ request.session.get("csrf_token") }}","activity_name":"{{ activity.name }}"}'
+        >Import Sport</button>
+        <button
+          class="button secondary compact"
+          hx-post="/schools/{{ school.id }}/activities/{{ activity.external_id }}/schedule"
+          hx-target="#school-schedule"
+          hx-swap="innerHTML"
+          hx-vals='{"csrf_token":"{{ request.session.get("csrf_token") }}","activity_name":"{{ activity.name }}"}'
+        >View Schedule</button>
+      </div>
+    </li>
+    {% else %}
+    <li>No activities were parsed from the current page.</li>
+    {% endfor %}
+  </ul>
+</div>
+<div id="school-import-banner"></div>
+{% endif %}

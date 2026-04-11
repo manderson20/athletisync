@@ -1,5 +1,54 @@
 # Changelog
 
+## 0.1.10 - 2026-04-11
+
+- Made the left navigation sidebar sticky so the menu remains visible while scrolling long pages.
+
+## 0.1.9 - 2026-04-11
+
+- Moved the sidebar version label to a consistently visible position near the top of the menu so it remains visible on long pages like MSHSAA Source Review.
+
+## 0.1.8 - 2026-04-11
+
+- Added selected-activity highlighting and a scrollable activities pane on the MSHSAA source review page.
+- Ordered activities by school-year flow using MSHSAA season metadata so fall items surface before winter and spring items.
+
+## 0.1.7 - 2026-04-11
+
+- Cleaned up the source review activity list so action buttons align in a consistent column with clearer row separation.
+- Normalized schedule preview type labels so tournament-related rows display cleaner human-readable values instead of raw class strings.
+
+## 0.1.6 - 2026-04-11
+
+- Added the running AthletiSync version number to the sidebar so admins can confirm which build is active in the UI.
+
+## 0.1.5 - 2026-04-11
+
+- Moved MSHSAA source review into a dedicated two-pane page so activity discovery and schedule inspection no longer compete on the main Schools page.
+- Replaced the inline `Preview Source` workflow with a cleaner `Review Source` navigation pattern.
+
+## 0.1.4 - 2026-04-11
+
+- Added a read-only in-app MSHSAA schedule browser so admins can inspect activities and their schedule rows before full sync setup.
+- Extended the MSHSAA parser to extract level-of-play labels and normalized schedule rows from the live schedule page.
+
+## 0.1.3 - 2026-04-11
+
+- Simplified the school setup UI by removing the unused `External ID` field from the admin form.
+- Added documentation for how administrators should locate and copy the correct MSHSAA school URL.
+
+## 0.1.2 - 2026-04-11
+
+- Added MSHSAA onboarding documentation and linked it from the main project docs.
+- Added admin-side MSHSAA source validation on the Schools page so configured school URLs can be tested and previewed before sync setup.
+- Refactored the MSHSAA parser to separate HTML parsing from HTTP fetches and added parser coverage tests.
+
+## 0.1.1 - 2026-04-11
+
+- Improved first-run admin flow with dedicated school year management and clearer dashboard summaries.
+- Hardened mapping, dashboard, and sync routes to load related records cleanly and expose more useful state in the UI.
+- Added integration-style application tests for login, health, dashboard access control, and settings updates.
+
 ## 0.1.0 - 2026-04-11
 
 - Initial AthletiSync MVP scaffold.

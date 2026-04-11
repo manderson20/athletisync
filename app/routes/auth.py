@@ -15,6 +15,7 @@ def login_page(request: Request):
     if request.session.get("user_id"):
         return RedirectResponse("/", status_code=303)
     return request.app.state.templates.TemplateResponse(
+        request,
         "auth/login.html",
         {"request": request, "csrf_token": ensure_csrf_token(request)},
     )
@@ -33,6 +34,7 @@ def login(
     user = authenticate_user(db, data.username, data.password)
     if not user:
         return request.app.state.templates.TemplateResponse(
+            request,
             "auth/login.html",
             {"request": request, "error": "Invalid username or password.", "csrf_token": ensure_csrf_token(request)},
             status_code=400,

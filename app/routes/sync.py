@@ -16,6 +16,7 @@ router = APIRouter(prefix="/sync", tags=["sync"])
 def sync_history(request: Request, db: Session = Depends(get_db), _user=Depends(require_user)):
     runs = db.scalars(select(SyncRun).order_by(SyncRun.started_at.desc()).limit(20)).all()
     return request.app.state.templates.TemplateResponse(
+        request,
         "sync/index.html",
         {"request": request, "runs": runs, "csrf_token": ensure_csrf_token(request)},
     )

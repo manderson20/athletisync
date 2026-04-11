@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}School Years | AthletiSync{% endblock %}
+{% block content %}
+<section class="page-header"><h2>School Years</h2></section>
+<section class="grid-2">
+  <article class="card">
+    <h3>Add School Year</h3>
+    <form method="post" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Label <input name="label" placeholder="2026-2027" required></label>
+      <label class="checkbox"><input type="checkbox" name="is_active" checked> Active</label>
+      <button class="button" type="submit">Save School Year</button>
+    </form>
+  </article>
+  <article class="card">
+    <h3>Configured School Years</h3>
+    <table>
+      <thead><tr><th>Label</th><th>Active</th></tr></thead>
+      <tbody>
+        {% for school_year in school_years %}
+        <tr><td>{{ school_year.label }}</td><td>{{ "Yes" if school_year.is_active else "No" }}</td></tr>
+        {% else %}
+        <tr><td colspan="2">No school years configured.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+</section>
+{% endblock %}

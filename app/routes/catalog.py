@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.dependencies import require_user
 from app.models import Sport, SportLevel
 from app.security import ensure_csrf_token, verify_csrf
+from app.services.catalog import ensure_level, ensure_sport
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
@@ -14,6 +15,7 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 @router.get("", response_class=HTMLResponse)
 def catalog_page(request: Request, db: Session = Depends(get_db), _user=Depends(require_user)):
     return request.app.state.templates.TemplateResponse(
+        request,
         "catalog/index.html",
         {
             "request": request,
@@ -34,8 +36,7 @@ def create_sport(
     _user=Depends(require_user),
 ):
     verify_csrf(request, csrf_token)
-    db.add(Sport(name=name.strip(), slug=slug.strip()))
-    db.commit()
+    ensure_sport(db, name.strip())
     return RedirectResponse("/catalog", status_code=303)
 
 
@@ -49,6 +50,5 @@ def create_level(
     _user=Depends(require_user),
 ):
     verify_csrf(request, csrf_token)
-    db.add(SportLevel(name=name.strip(), slug=slug.strip()))
-    db.commit()
+    ensure_level(db, name.strip())
     return RedirectResponse("/catalog", status_code=303)

@@ -17,6 +17,8 @@ The initial admin account is created from `.env` if no users exist.
 
 - Change the default admin password immediately.
 - Set the district name and timezone on the settings page.
+- Add one or more school years on the School Years page.
 - Add one or more schools with MSHSAA references.
+- Use Preview Source on the Schools page to verify MSHSAA connectivity.
 - Add Google auth profile(s) and calendar destinations.
 - Create mapping rows for school year, school, sport, level, and calendar destination combinations.
