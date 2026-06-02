@@ -17,24 +17,26 @@
     <label>Google OAuth Client Secret <input name="google_oauth_client_secret" value="{{ google_settings.google_oauth_client_secret or '' }}"></label>
     <label>Google OAuth Redirect URI <input name="google_oauth_redirect_uri" value="{{ google_settings.google_oauth_redirect_uri or google_oauth_redirect_uri }}"></label>
     <p class="muted">Use the exact same redirect URI in Google Cloud for your OAuth web client.</p>
+    <p class="muted">This URI does not need a public domain. It only needs to be reachable by the browser you use during Google sign-in. If you access AthletiSync at <code>http://172.16.1.77</code>, then the redirect URI can also use <code>http://172.16.1.77</code>.</p>
     <button class="button secondary" type="submit">Save Google OAuth Configuration</button>
   </form>
 </section>
 <section class="grid-2">
   <article class="card">
     <div class="section-heading">
-      <h3>Connect Google Account</h3>
+      <h3>Add Google Account Connection</h3>
       <details class="help-popover">
         <summary>Setup Instructions</summary>
         <div class="help-popover-panel stack">
-          <p class="muted">Recommended setup: connect the dedicated Google account that already manages your calendars.</p>
+          <p class="muted">Use this section to add the Google account AthletiSync should use for calendar access.</p>
           <ol class="help-list">
             <li>Fill in the <strong>Google OAuth Configuration</strong> section on this page and save it.</li>
             <li>In the form below, enter a profile name such as <code>District Calendar Manager</code>.</li>
-            <li>Click <strong>Start Google Sign-In</strong>.</li>
-            <li>Sign in with the dedicated Google account that already has edit access to the calendars.</li>
+            <li>Click <strong>Sign In With Google</strong>.</li>
+            <li>Sign in with the Google account that already has access to the calendar you want AthletiSync to manage.</li>
             <li>Approve the requested Google Calendar access.</li>
-            <li>After you return here, AthletiSync saves the connected Google account as an auth profile.</li>
+            <li>After Google sends you back to this page, AthletiSync saves that Google account as an auth profile.</li>
+            <li>Repeat this section again if you want to connect a second Google account.</li>
             <li>Then use <strong>Add Calendar</strong> to save a separate calendar destination record.</li>
             <li>When you add the calendar destination, enter a label, the exact Google Calendar ID, and select the connected auth profile.</li>
             <li>Use the <strong>Test Calendar Access</strong> button in the calendar list to confirm that the connected account has writer or owner access to that specific calendar.</li>
@@ -44,10 +46,10 @@
     </div>
     <form method="post" action="/google/oauth/start" class="stack">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <label>Profile Name <input name="name" placeholder="District Calendar Manager" required></label>
-      <p class="muted">This saves the Google user account connection. It does not create a calendar destination by itself.</p>
+      <label>Connection Name <input name="name" placeholder="District Calendar Manager" required></label>
+      <p class="muted">This is where you add the Google account AthletiSync will use. It saves the Google account connection only. You will add the calendar destination separately in the next section.</p>
       {% if google_oauth_ready %}
-      <button class="button" type="submit">Start Google Sign-In</button>
+      <button class="button" type="submit">Sign In With Google</button>
       {% else %}
       <div class="banner error">Google OAuth is not configured yet. Fill in and save the Google OAuth Configuration section on this page first.</div>
       {% endif %}

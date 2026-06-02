@@ -236,8 +236,8 @@ def test_google_page_shows_oauth_guidance() -> None:
         response = client.get("/google")
         assert response.status_code == 200
         assert "Google OAuth Configuration" in response.text
-        assert "Connect Google Account" in response.text
-        assert "Start Google Sign-In" in response.text
+        assert "Add Google Account Connection" in response.text
+        assert "Sign In With Google" in response.text
         assert "Save Calendar Destination" in response.text
         assert "Current redirect URI" in response.text
 

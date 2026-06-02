@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.18 - 2026-06-02
+
+- Clarified the Google page setup copy so admins can see that the page is where they add the Google account connection AthletiSync will use for calendar access.
+- Added callback URI guidance explaining that an internal IP address is acceptable when the browser reaches AthletiSync on the same network.
+
 ## 0.1.17 - 2026-06-02
 
 - Moved Google OAuth client configuration off the general Settings page and back onto the Google page so the full Google setup flow lives in one place.
