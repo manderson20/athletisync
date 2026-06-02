@@ -244,6 +244,8 @@ def test_google_page_shows_oauth_guidance() -> None:
         assert "Current redirect URI" in response.text
         assert "Create Credentials" in response.text
         assert "OAuth client ID" in response.text
+        assert "Authorized JavaScript Origin" in response.text
+        assert "Authorized Redirect URI" in response.text
 
 
 def test_google_page_uses_server_base_url_for_redirect_hint() -> None:
@@ -269,7 +271,49 @@ def test_google_page_uses_server_base_url_for_redirect_hint() -> None:
         )
         response = client.get("/google")
         assert response.status_code == 200
+        assert "http://172.16.1.77" in response.text
         assert "http://172.16.1.77/google/oauth/callback" in response.text
+
+
+def test_server_base_url_without_scheme_is_normalized_for_google_values() -> None:
+    from sqlalchemy import select
+
+    from app.db.session import SessionLocal
+    from app.models import AppSetting
+
+    with build_test_client() as client:
+        login(client)
+        settings_page = client.get("/settings")
+        settings_csrf = extract_csrf(settings_page.text)
+        client.post(
+            "/settings",
+            data={
+                "district_name": "AthletiSync District",
+                "server_base_url": "athletisync.brookfieldr3.org",
+                "timezone": "America/Chicago",
+                "polling_interval_minutes": 30,
+                "event_title_template": "{school} {sport} {level} vs {opponent}",
+                "event_description_template": "School: {school}",
+                "cancellation_behavior": "mark_cancelled",
+                "sync_retry_count": 2,
+                "log_retention_days": 30,
+                "csrf_token": settings_csrf,
+            },
+            follow_redirects=True,
+        )
+
+        db = SessionLocal()
+        try:
+            settings = db.scalar(select(AppSetting))
+            assert settings is not None
+            assert settings.server_base_url == "https://athletisync.brookfieldr3.org"
+        finally:
+            db.close()
+
+        response = client.get("/google")
+        assert response.status_code == 200
+        assert "https://athletisync.brookfieldr3.org" in response.text
+        assert "https://athletisync.brookfieldr3.org/google/oauth/callback" in response.text
 
 
 def test_can_save_google_oauth_settings_on_google_page() -> None:

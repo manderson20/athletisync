@@ -11,6 +11,7 @@ from app.dependencies import require_user
 from app.models import AppSetting, GoogleAuthProfile, GoogleCalendar
 from app.security import ensure_csrf_token, verify_csrf
 from app.services.google_calendar import DryRunCalendarGateway, GoogleCalendarGateway
+from app.services.url_helpers import google_oauth_origin, google_oauth_redirect_uri_from_base_url
 
 try:
     from google_auth_oauthlib.flow import Flow
@@ -33,7 +34,9 @@ def google_oauth_redirect_uri(request: Request) -> str:
     app_settings = request.state.google_app_settings if hasattr(request.state, "google_app_settings") else None
     settings = request.app.state.settings
     if app_settings and app_settings.server_base_url:
-        return f"{app_settings.server_base_url.rstrip('/')}/google/oauth/callback"
+        return google_oauth_redirect_uri_from_base_url(app_settings.server_base_url) or str(
+            request.url_for("google_oauth_callback")
+        )
     return (
         (app_settings.google_oauth_redirect_uri if app_settings else None)
         or settings.google_oauth_redirect_uri
@@ -67,6 +70,7 @@ def google_page(request: Request, db: Session = Depends(get_db), _user=Depends(r
         "csrf_token": ensure_csrf_token(request),
         "google_banner": pop_google_banner(request),
         "google_oauth_ready": google_oauth_ready(app_settings, request),
+        "google_oauth_origin": google_oauth_origin(app_settings.server_base_url),
         "google_oauth_redirect_uri": google_oauth_redirect_uri(request),
         "google_settings": app_settings,
     }

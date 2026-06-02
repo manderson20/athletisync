@@ -10,6 +10,7 @@ from app.schemas import SettingsFormData
 from app.security import ensure_csrf_token, verify_csrf
 from app.services.event_formatting import preview_event_format
 from app.services.school_years import AUTOMATIC_SCHOOL_YEAR_LABEL, current_school_year_label
+from app.services.url_helpers import normalize_server_base_url
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -54,7 +55,7 @@ def save_settings(
     verify_csrf(request, csrf_token)
     payload = SettingsFormData(
         district_name=district_name,
-        server_base_url=(server_base_url or "").strip().rstrip("/") or None,
+        server_base_url=normalize_server_base_url(server_base_url),
         timezone=timezone,
         polling_interval_minutes=polling_interval_minutes,
         event_title_template=event_title_template,
@@ -93,7 +94,7 @@ def preview_format(
     verify_csrf(request, csrf_token)
     settings = AppSetting(
         district_name=district_name,
-        server_base_url=(server_base_url or "").strip().rstrip("/") or None,
+        server_base_url=normalize_server_base_url(server_base_url),
         timezone=timezone,
         polling_interval_minutes=polling_interval_minutes,
         event_title_template=event_title_template,

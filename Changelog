@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.21 - 2026-06-02
+
+- Added copy-ready Google OAuth values on the Google page for both `Authorized JavaScript origin` and `Authorized redirect URI`, so admins can paste the exact correct entries into Google Cloud.
+- Normalized deployment server URLs so schools can enter a bare hostname like `athletisync.brookfieldr3.org` and AthletiSync will derive the correct HTTPS Google OAuth values automatically.
+
 ## 0.1.20 - 2026-06-02
 
 - Added a deployment-level `Server Base URL` setting so each school can define its own host or IP once and let the Google OAuth callback URI populate from that value.
