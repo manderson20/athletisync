@@ -47,3 +47,11 @@ def test_parse_row_datetime_accepts_ranged_date_text() -> None:
     assert start_at.month == 5
     assert start_at.day == 31
     assert is_all_day is False
+
+
+def test_parse_row_datetime_skips_continuation_marker_rows() -> None:
+    service = SyncService(db=None)  # type: ignore[arg-type]
+    start_at, end_at, is_all_day = service._parse_row_datetime("⤷ 11", "7:00 PM", "2026-2027")
+    assert start_at is None
+    assert end_at is None
+    assert is_all_day is True
