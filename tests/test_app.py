@@ -87,9 +87,6 @@ def test_settings_update_creates_school_year() -> None:
                 "cancellation_behavior": "mark_cancelled",
                 "sync_retry_count": 2,
                 "log_retention_days": 30,
-                "google_oauth_client_id": "client-id",
-                "google_oauth_client_secret": "client-secret",
-                "google_oauth_redirect_uri": "http://testserver/google/oauth/callback",
                 "csrf_token": settings_csrf,
             },
             follow_redirects=True,
@@ -97,7 +94,6 @@ def test_settings_update_creates_school_year() -> None:
 
         assert response.status_code == 200
         assert "Automatic school-year handling" in response.text or "School Year Handling" in response.text
-        assert "Google OAuth Client ID" in response.text
 
 
 def test_import_sport_from_school_flow() -> None:
@@ -239,14 +235,14 @@ def test_google_page_shows_oauth_guidance() -> None:
         login(client)
         response = client.get("/google")
         assert response.status_code == 200
+        assert "Google OAuth Configuration" in response.text
         assert "Connect Google Account" in response.text
         assert "Start Google Sign-In" in response.text
         assert "Save Calendar Destination" in response.text
-        assert "Legacy Service Account Setup" in response.text
         assert "Current redirect URI" in response.text
 
 
-def test_can_save_google_oauth_settings_in_ui() -> None:
+def test_can_save_google_oauth_settings_on_google_page() -> None:
     from sqlalchemy import select
 
     from app.db.session import SessionLocal
@@ -254,19 +250,11 @@ def test_can_save_google_oauth_settings_in_ui() -> None:
 
     with build_test_client() as client:
         login(client)
-        settings_page = client.get("/settings")
-        settings_csrf = extract_csrf(settings_page.text)
+        google_page = client.get("/google")
+        settings_csrf = extract_csrf(google_page.text)
         response = client.post(
-            "/settings",
+            "/google/oauth/config",
             data={
-                "district_name": "AthletiSync District",
-                "timezone": "America/Chicago",
-                "polling_interval_minutes": 30,
-                "event_title_template": "{school} {sport} {level} vs {opponent}",
-                "event_description_template": "School: {school}",
-                "cancellation_behavior": "mark_cancelled",
-                "sync_retry_count": 2,
-                "log_retention_days": 30,
                 "google_oauth_client_id": "ui-client-id",
                 "google_oauth_client_secret": "ui-client-secret",
                 "google_oauth_redirect_uri": "http://testserver/google/oauth/callback",
@@ -275,6 +263,7 @@ def test_can_save_google_oauth_settings_in_ui() -> None:
             follow_redirects=True,
         )
         assert response.status_code == 200
+        assert "Saved Google OAuth configuration." in response.text
 
         db = SessionLocal()
         try:
@@ -285,24 +274,6 @@ def test_can_save_google_oauth_settings_in_ui() -> None:
             assert settings.google_oauth_redirect_uri == "http://testserver/google/oauth/callback"
         finally:
             db.close()
-
-
-def test_can_save_legacy_service_account_profile() -> None:
-    with build_test_client() as client:
-        login(client)
-        google_page = client.get("/google")
-        csrf_token = extract_csrf(google_page.text)
-        response = client.post(
-            "/google/profiles",
-            data={
-                "name": "Legacy Google Profile",
-                "service_account_json": '{"type":"service_account"}',
-                "csrf_token": csrf_token,
-            },
-            follow_redirects=True,
-        )
-        assert response.status_code == 200
-        assert "Saved service account profile: Legacy Google Profile." in response.text
 
 
 def test_calendar_access_test_requires_auth_profile() -> None:

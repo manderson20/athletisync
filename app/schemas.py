@@ -19,9 +19,6 @@ class SettingsFormData(BaseModel):
     cancellation_behavior: str
     sync_retry_count: int = Field(ge=0, le=10)
     log_retention_days: int = Field(ge=1, le=365)
-    google_oauth_client_id: str | None = None
-    google_oauth_client_secret: str | None = None
-    google_oauth_redirect_uri: str | None = None
 
 
 class MappingFormData(BaseModel):

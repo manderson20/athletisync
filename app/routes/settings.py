@@ -46,9 +46,6 @@ def save_settings(
     cancellation_behavior: str = Form(...),
     sync_retry_count: int = Form(...),
     log_retention_days: int = Form(...),
-    google_oauth_client_id: str = Form(default=""),
-    google_oauth_client_secret: str = Form(default=""),
-    google_oauth_redirect_uri: str = Form(default=""),
     csrf_token: str = Form(...),
     db: Session = Depends(get_db),
     _user=Depends(require_user),
@@ -63,9 +60,6 @@ def save_settings(
         cancellation_behavior=cancellation_behavior,
         sync_retry_count=sync_retry_count,
         log_retention_days=log_retention_days,
-        google_oauth_client_id=(google_oauth_client_id or "").strip() or None,
-        google_oauth_client_secret=(google_oauth_client_secret or "").strip() or None,
-        google_oauth_redirect_uri=(google_oauth_redirect_uri or "").strip() or None,
     )
     settings = db.scalar(select(AppSetting))
     if settings is None:
@@ -90,9 +84,6 @@ def preview_format(
     cancellation_behavior: str = Form(...),
     sync_retry_count: int = Form(...),
     log_retention_days: int = Form(...),
-    google_oauth_client_id: str = Form(default=""),
-    google_oauth_client_secret: str = Form(default=""),
-    google_oauth_redirect_uri: str = Form(default=""),
     csrf_token: str = Form(...),
     _user=Depends(require_user),
 ):
@@ -107,9 +98,6 @@ def preview_format(
         sync_retry_count=sync_retry_count,
         log_retention_days=log_retention_days,
         default_school_year_label=AUTOMATIC_SCHOOL_YEAR_LABEL,
-        google_oauth_client_id=(google_oauth_client_id or "").strip() or None,
-        google_oauth_client_secret=(google_oauth_client_secret or "").strip() or None,
-        google_oauth_redirect_uri=(google_oauth_redirect_uri or "").strip() or None,
     )
     return request.app.state.templates.TemplateResponse(
         request,

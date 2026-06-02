@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.17 - 2026-06-02
+
+- Moved Google OAuth client configuration off the general Settings page and back onto the Google page so the full Google setup flow lives in one place.
+- Removed the legacy service-account setup path from the Google UI and kept the page focused on the dedicated Google account OAuth flow.
+
 ## 0.1.16 - 2026-06-02
 
 - Added Google OAuth user-auth support for calendar sync, so districts can connect the dedicated Google calendar manager account instead of relying only on service-account JSON keys.

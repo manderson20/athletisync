@@ -56,7 +56,9 @@ def google_page(request: Request, db: Session = Depends(get_db), _user=Depends(r
     request.state.google_app_settings = app_settings
     context = {
         "request": request,
-        "profiles": db.scalars(select(GoogleAuthProfile).order_by(GoogleAuthProfile.name)).all(),
+        "profiles": db.scalars(
+            select(GoogleAuthProfile).where(GoogleAuthProfile.auth_type == "oauth").order_by(GoogleAuthProfile.name)
+        ).all(),
         "calendars": db.scalars(
             select(GoogleCalendar).options(selectinload(GoogleCalendar.auth_profile)).order_by(GoogleCalendar.display_name)
         ).all(),
@@ -64,29 +66,31 @@ def google_page(request: Request, db: Session = Depends(get_db), _user=Depends(r
         "google_banner": pop_google_banner(request),
         "google_oauth_ready": google_oauth_ready(app_settings, request),
         "google_oauth_redirect_uri": google_oauth_redirect_uri(request),
+        "google_settings": app_settings,
     }
     return request.app.state.templates.TemplateResponse(request, "google/index.html", context)
 
 
-@router.post("/profiles")
-def create_profile(
+@router.post("/oauth/config")
+def save_google_oauth_config(
     request: Request,
-    name: str = Form(...),
-    service_account_json: str = Form(...),
+    google_oauth_client_id: str = Form(default=""),
+    google_oauth_client_secret: str = Form(default=""),
+    google_oauth_redirect_uri: str = Form(default=""),
     csrf_token: str = Form(...),
     db: Session = Depends(get_db),
     _user=Depends(require_user),
 ):
     verify_csrf(request, csrf_token)
-    db.add(
-        GoogleAuthProfile(
-            name=name.strip(),
-            auth_type="service_account",
-            service_account_json=service_account_json.strip(),
-        )
-    )
+    settings = db.scalar(select(AppSetting))
+    if settings is None:
+        settings = AppSetting()
+        db.add(settings)
+    settings.google_oauth_client_id = (google_oauth_client_id or "").strip() or None
+    settings.google_oauth_client_secret = (google_oauth_client_secret or "").strip() or None
+    settings.google_oauth_redirect_uri = (google_oauth_redirect_uri or "").strip() or None
     db.commit()
-    set_google_banner(request, "success", f"Saved service account profile: {name.strip()}.")
+    set_google_banner(request, "success", "Saved Google OAuth configuration.")
     return RedirectResponse("/google", status_code=303)
 
 
@@ -111,7 +115,7 @@ def start_google_oauth(
         set_google_banner(
             request,
             "error",
-            "Missing Google OAuth client settings. Open Settings and fill in the Google OAuth section first.",
+            "Missing Google OAuth client settings. Fill in the Google OAuth Configuration section on this page first.",
         )
         return RedirectResponse("/google", status_code=303)
 
@@ -167,7 +171,7 @@ def google_oauth_callback(
     client_id = app_settings.google_oauth_client_id or settings.google_oauth_client_id
     client_secret = app_settings.google_oauth_client_secret or settings.google_oauth_client_secret
     if not client_id or not client_secret:
-        set_google_banner(request, "error", "Missing Google OAuth client settings. Open Settings and fill them in.")
+        set_google_banner(request, "error", "Missing Google OAuth client settings. Fill them in on the Google page.")
         return RedirectResponse("/google", status_code=303)
 
     flow = Flow.from_client_config(

@@ -4,7 +4,7 @@ AthletiSync is a lightweight self-hosted web application that syncs MSHSAA athle
 
 ## Current MVP
 
-Version: `0.1.16`
+Version: `0.1.17`
 
 The current MVP includes:
 
@@ -71,7 +71,7 @@ Each versioned change should also be recorded in `Changelog`.
 
 - The sync service currently uses deterministic sample events while district-specific MSHSAA source pages are being configured.
 - The MSHSAA parsing layer is isolated so live provider adapters can be hardened without changing mapping, storage, or Google sync logic.
-- The Google Calendar integration supports Google OAuth user access and legacy service-account access when installed with the `google` dependency extra, and OAuth client settings can be managed from the AthletiSync settings UI.
+- The Google Calendar integration supports Google OAuth user access when installed with the `google` dependency extra, and the OAuth client settings can be managed directly from the Google page in the UI.
 
 ## Documentation
 

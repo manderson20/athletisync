@@ -36,14 +36,6 @@
     </label>
     <label>Sync Retry Count <input name="sync_retry_count" type="number" min="0" value="{{ settings.sync_retry_count }}" required></label>
     <label>Log Retention Days <input name="log_retention_days" type="number" min="1" value="{{ settings.log_retention_days }}" required></label>
-    <div class="card inset-card">
-      <strong>Google OAuth</strong>
-      <p class="muted">Configure the Google OAuth client here so admins can connect the dedicated calendar manager account from the Google page.</p>
-      <label>Google OAuth Client ID <input name="google_oauth_client_id" value="{{ settings.google_oauth_client_id or '' }}"></label>
-      <label>Google OAuth Client Secret <input name="google_oauth_client_secret" value="{{ settings.google_oauth_client_secret or '' }}"></label>
-      <label>Google OAuth Redirect URI <input name="google_oauth_redirect_uri" value="{{ settings.google_oauth_redirect_uri or '' }}" placeholder="http://172.16.1.77/google/oauth/callback"></label>
-      <p class="muted">Use the exact same redirect URI in Google Cloud for your OAuth web client.</p>
-    </div>
     <button class="button" type="submit">Save Settings</button>
   </form>
 </section>
