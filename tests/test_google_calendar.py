@@ -91,7 +91,7 @@ def test_build_event_payload_includes_timezone_for_timed_events() -> None:
     assert payload.end["timeZone"] == "America/Chicago"
 
 
-def test_build_event_payload_removes_redundant_home_away_suffix_from_summary() -> None:
+def test_build_event_payload_normalizes_away_summary_wording() -> None:
     mapping = SyncMapping(
         school_year=SchoolYear(label="2026-2027"),
         school=School(name="Central High"),
@@ -117,8 +117,58 @@ def test_build_event_payload_removes_redundant_home_away_suffix_from_summary() -
     )
 
     payload = build_event_payload(mapping, source_event, settings)
-    assert payload.summary == "Varsity High School Football VS at Monroe City"
+    assert payload.summary == "Varsity High School Football at Monroe City"
     assert payload.description == "Location: Away"
+
+
+def test_build_event_payload_uses_at_for_away_games() -> None:
+    mapping = SyncMapping(
+        school_year=SchoolYear(label="2026-2027"),
+        school=School(name="Brookfield"),
+        sport=Sport(name="Football", slug="football"),
+        level=SportLevel(name="Varsity", slug="varsity"),
+    )
+    source_event = SourceEvent(
+        title="Football vs Marceline",
+        opponent="Marceline",
+        start_at=datetime.fromisoformat("2026-09-01T18:00:00-05:00"),
+        end_at=datetime.fromisoformat("2026-09-01T20:00:00-05:00"),
+        status="scheduled",
+        payload={"level_name": "Varsity", "row_type": "Away"},
+    )
+    settings = AppSetting(
+        timezone="America/Chicago",
+        event_title_template="{school} vs {opponent}",
+        event_description_template="Location: {location}",
+    )
+
+    payload = build_event_payload(mapping, source_event, settings)
+    assert payload.summary == "Brookfield at Marceline"
+
+
+def test_build_event_payload_keeps_vs_for_home_games_when_template_contains_at() -> None:
+    mapping = SyncMapping(
+        school_year=SchoolYear(label="2026-2027"),
+        school=School(name="Brookfield"),
+        sport=Sport(name="Football", slug="football"),
+        level=SportLevel(name="Varsity", slug="varsity"),
+    )
+    source_event = SourceEvent(
+        title="Football vs Marceline",
+        opponent="Marceline",
+        start_at=datetime.fromisoformat("2026-09-01T18:00:00-05:00"),
+        end_at=datetime.fromisoformat("2026-09-01T20:00:00-05:00"),
+        status="scheduled",
+        payload={"level_name": "Varsity", "row_type": "Home"},
+    )
+    settings = AppSetting(
+        timezone="America/Chicago",
+        event_title_template="{school} vs at {opponent}",
+        event_description_template="Location: {location}",
+    )
+
+    payload = build_event_payload(mapping, source_event, settings)
+    assert payload.summary == "Brookfield vs Marceline"
 
 
 def test_dry_run_delete_event_is_idempotent() -> None:

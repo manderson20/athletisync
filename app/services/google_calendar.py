@@ -204,12 +204,12 @@ def event_fingerprint(source_event: SourceEvent, calendar_payload: CalendarEvent
 
 
 def build_event_payload(mapping: SyncMapping, source_event: SourceEvent, settings: AppSetting | str) -> CalendarEventPayload:
+    payload = source_event.payload if isinstance(source_event.payload, dict) else {}
     timezone_name = None
     if isinstance(settings, AppSetting):
         title_template, description_template = resolve_templates(settings, mapping)
         timezone_name = settings.timezone
     else:
-        payload = source_event.payload if isinstance(source_event.payload, dict) else {}
         title_template = payload.get("event_title_template") or source_event.title
         description_template = settings
         if source_event.start_at and source_event.start_at.tzinfo is not None:
@@ -217,7 +217,7 @@ def build_event_payload(mapping: SyncMapping, source_event: SourceEvent, setting
     context = build_format_context(mapping, source_event, timezone_name)
     description = render_template(description_template, context)
     summary = render_template(title_template or "{sport}", context)
-    summary = _clean_summary_text(summary)
+    summary = _clean_summary_text(summary, payload.get("row_type"))
     if source_event.is_all_day:
         start = {"date": source_event.start_at.date().isoformat()} if source_event.start_at else {}
         end = {"date": (source_event.end_at or source_event.start_at).date().isoformat()} if source_event.start_at else {}
@@ -241,8 +241,16 @@ def build_event_payload(mapping: SyncMapping, source_event: SourceEvent, setting
     )
 
 
-def _clean_summary_text(summary: str) -> str:
+def _clean_summary_text(summary: str, row_type: str | None = None) -> str:
     cleaned = summary.strip()
+    row_type_normalized = (row_type or "").strip().lower()
+    if row_type_normalized == "away":
+        cleaned = re.sub(r"\bvs\.?\s+at\b", "at", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\bat\s+at\b", "at", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\bvs\.?\b", "at", cleaned, count=1, flags=re.IGNORECASE)
+    elif row_type_normalized in {"home", "neutral"}:
+        cleaned = re.sub(r"\bvs\.?\s+at\b", "vs", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\bat\s+vs\b", "vs", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\s+at\s+(Home|Away|Neutral)\s*$", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\s+at\s*$", "", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"\s{2,}", " ", cleaned)

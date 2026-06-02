@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.33 - 2026-06-02
+
+- Normalized Google event titles so away games use `at` and home games keep `vs`, preventing mixed wording like `vs at Marceline`.
+- Extended summary cleanup so existing synced Google events can be rewritten on the next sync with cleaner matchup wording.
+
 ## 0.1.32 - 2026-06-02
 
 - Restored the Google OAuth client-secret field in the UI, but now store the submitted secret encrypted at rest instead of keeping it in plaintext.
