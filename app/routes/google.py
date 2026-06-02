@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.db.session import get_db
 from app.dependencies import require_user
 from app.models import AppSetting, GoogleAuthProfile, GoogleCalendar
-from app.security import ensure_csrf_token, verify_csrf
+from app.security import decrypt_secret, encrypt_secret, ensure_csrf_token, verify_csrf
 from app.services.google_calendar import DryRunCalendarGateway, GoogleCalendarGateway
 from app.services.url_helpers import google_oauth_origin, google_oauth_redirect_uri_from_base_url
 
@@ -52,7 +52,10 @@ def get_google_app_settings(db: Session) -> AppSetting:
 def google_oauth_ready(app_settings: AppSetting, request: Request) -> bool:
     settings = request.app.state.settings
     client_id = app_settings.google_oauth_client_id or settings.google_oauth_client_id
-    client_secret = settings.google_oauth_client_secret or app_settings.google_oauth_client_secret
+    client_secret = settings.google_oauth_client_secret or decrypt_secret(
+        app_settings.google_oauth_client_secret,
+        settings.app_secret_key,
+    )
     return bool(client_id and client_secret)
 
 
@@ -74,6 +77,7 @@ def google_page(request: Request, db: Session = Depends(get_db), _user=Depends(r
         "google_oauth_origin": google_oauth_origin(app_settings.server_base_url),
         "google_oauth_redirect_uri": google_oauth_redirect_uri(request),
         "google_settings": app_settings,
+        "google_ui_secret_configured": bool(app_settings.google_oauth_client_secret),
     }
     return request.app.state.templates.TemplateResponse(request, "google/index.html", context)
 
@@ -82,6 +86,7 @@ def google_page(request: Request, db: Session = Depends(get_db), _user=Depends(r
 def save_google_oauth_config(
     request: Request,
     google_oauth_client_id: str = Form(default=""),
+    google_oauth_client_secret: str = Form(default=""),
     google_oauth_redirect_uri: str = Form(default=""),
     csrf_token: str = Form(...),
     db: Session = Depends(get_db),
@@ -93,6 +98,9 @@ def save_google_oauth_config(
         settings = AppSetting()
         db.add(settings)
     settings.google_oauth_client_id = (google_oauth_client_id or "").strip() or None
+    submitted_secret = (google_oauth_client_secret or "").strip()
+    if submitted_secret:
+        settings.google_oauth_client_secret = encrypt_secret(submitted_secret, request.app.state.settings.app_secret_key)
     settings.google_oauth_redirect_uri = (google_oauth_redirect_uri or "").strip() or None
     db.commit()
     set_google_banner(request, "success", "Saved Google OAuth configuration.")
@@ -115,7 +123,10 @@ def start_google_oauth(
         set_google_banner(request, "error", "Install AthletiSync with the google extra to enable Google OAuth.")
         return RedirectResponse("/google", status_code=303)
     client_id = app_settings.google_oauth_client_id or settings.google_oauth_client_id
-    client_secret = app_settings.google_oauth_client_secret or settings.google_oauth_client_secret
+    client_secret = settings.google_oauth_client_secret or decrypt_secret(
+        app_settings.google_oauth_client_secret,
+        settings.app_secret_key,
+    )
     if not client_id or not client_secret:
         set_google_banner(
             request,
@@ -176,7 +187,10 @@ def google_oauth_callback(
         set_google_banner(request, "error", "Install AthletiSync with the google extra to enable Google OAuth.")
         return RedirectResponse("/google", status_code=303)
     client_id = app_settings.google_oauth_client_id or settings.google_oauth_client_id
-    client_secret = app_settings.google_oauth_client_secret or settings.google_oauth_client_secret
+    client_secret = settings.google_oauth_client_secret or decrypt_secret(
+        app_settings.google_oauth_client_secret,
+        settings.app_secret_key,
+    )
     if not client_id or not client_secret:
         set_google_banner(request, "error", "Missing Google OAuth client settings. Fill them in on the Google page.")
         return RedirectResponse("/google", status_code=303)

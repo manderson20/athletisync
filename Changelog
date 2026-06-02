@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.32 - 2026-06-02
+
+- Restored the Google OAuth client-secret field in the UI, but now store the submitted secret encrypted at rest instead of keeping it in plaintext.
+- Kept the Google page from ever rendering the saved secret back to the browser; blank saves now preserve the existing encrypted secret and only replace it when a new value is entered.
+- Continued preferring the server environment variable `GOOGLE_OAUTH_CLIENT_SECRET` when present, while allowing the encrypted UI-managed secret as a secure fallback.
+
 ## 0.1.31 - 2026-06-02
 
 - Removed the Google OAuth client-secret field from the UI so AthletiSync no longer round-trips that secret through the web form.

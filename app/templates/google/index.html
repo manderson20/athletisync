@@ -14,9 +14,11 @@
   <form method="post" action="/google/oauth/config" class="stack">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>Google OAuth Client ID <input name="google_oauth_client_id" value="{{ google_settings.google_oauth_client_id or '' }}"></label>
+    <label>Google OAuth Client Secret <input type="password" name="google_oauth_client_secret" value="" placeholder="{{ 'Saved securely. Enter a new value to replace it.' if google_ui_secret_configured else 'Paste the Google client secret' }}" autocomplete="off"></label>
     <label>Google OAuth Redirect URI <input name="google_oauth_redirect_uri" value="{{ google_settings.google_oauth_redirect_uri or google_oauth_redirect_uri }}"></label>
     <p class="muted">Get the Client ID and Client Secret from Google Cloud Console: <strong>APIs &amp; Services</strong> -> <strong>Credentials</strong> -> <strong>Create Credentials</strong> -> <strong>OAuth client ID</strong> -> <strong>Web application</strong>.</p>
-    <p class="muted">For security, the <strong>Client Secret</strong> is no longer stored in the AthletiSync UI. Set it on the server as <code>GOOGLE_OAUTH_CLIENT_SECRET</code>. Existing installs can keep using a previously saved secret until you migrate it.</p>
+    <p class="muted">The <strong>Client Secret</strong> is accepted here, but AthletiSync stores it encrypted and never shows the saved value back in the UI. Leaving it blank keeps the current saved secret unchanged.</p>
+    <p class="muted">If you prefer, AthletiSync will still use the server environment variable <code>GOOGLE_OAUTH_CLIENT_SECRET</code> instead of the UI-saved secret when that env var is present.</p>
     <p class="muted">Copy these exact values into Google Cloud when creating the OAuth client:</p>
     <label>Authorized JavaScript Origin <input value="{{ google_oauth_origin or '' }}" readonly></label>
     <label>Authorized Redirect URI <input value="{{ google_oauth_redirect_uri }}" readonly></label>
@@ -45,7 +47,7 @@
             <li>Under <strong>Authorized JavaScript origins</strong>, add <code>{{ google_oauth_origin or "your server base URL" }}</code>.</li>
             <li>Under <strong>Authorized redirect URIs</strong>, add <code>{{ google_oauth_redirect_uri }}</code>.</li>
             <li>After Google creates the OAuth client, copy the <strong>Client ID</strong> into <strong>Google OAuth Client ID</strong> on this page.</li>
-            <li>On the AthletiSync server, set the environment variable <code>GOOGLE_OAUTH_CLIENT_SECRET</code> to the Google <strong>Client secret</strong>.</li>
+            <li>Either paste the Google <strong>Client secret</strong> into the <strong>Google OAuth Client Secret</strong> field on this page, or set <code>GOOGLE_OAUTH_CLIENT_SECRET</code> on the server.</li>
             <li>Copy <code>{{ google_oauth_redirect_uri }}</code> into <strong>Google OAuth Redirect URI</strong> on this page if it is not already correct.</li>
             <li>Click <strong>Save Google OAuth Configuration</strong>.</li>
             <li>In the form below, enter a connection name such as <code>District Calendar Manager</code>.</li>

@@ -9,6 +9,7 @@ from typing import Protocol
 
 from app.config import Settings, get_settings
 from app.models import AppSetting, GoogleAuthProfile, SourceEvent, SyncMapping
+from app.security import decrypt_secret
 from app.services.event_formatting import build_format_context, render_template, resolve_templates
 
 try:
@@ -62,7 +63,10 @@ class GoogleCalendarGateway:
     def _oauth_client_secret(self) -> str | None:
         return (
             self.settings.google_oauth_client_secret
-            or (self.app_settings.google_oauth_client_secret if self.app_settings else None)
+            or decrypt_secret(
+                self.app_settings.google_oauth_client_secret if self.app_settings else None,
+                self.settings.app_secret_key,
+            )
         )
 
     def _build_service(self):
