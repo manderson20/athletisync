@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import parse_qs, urlsplit
+
 from fastapi.testclient import TestClient
 
 
@@ -373,3 +375,83 @@ def test_calendar_access_test_requires_auth_profile() -> None:
         )
         assert response.status_code == 200
         assert "missing an auth profile" in response.text
+
+
+def test_google_oauth_start_and_callback_preserve_code_verifier(monkeypatch) -> None:
+    from app.routes import google as google_routes
+
+    captured: dict[str, str | None] = {}
+
+    class FakeCredentials:
+        token = "access-token"
+        refresh_token = "refresh-token"
+        scopes = ["https://www.googleapis.com/auth/calendar", "openid", "email"]
+
+    class FakeFlow:
+        def __init__(self, *, state=None, redirect_uri=None, code_verifier=None):
+            self.state = state
+            self.redirect_uri = redirect_uri
+            self.code_verifier = code_verifier or "verifier-123"
+            self.credentials = FakeCredentials()
+
+        @classmethod
+        def from_client_config(cls, _client_config, scopes=None, state=None, redirect_uri=None, code_verifier=None):
+            captured["callback_code_verifier"] = code_verifier
+            return cls(state=state, redirect_uri=redirect_uri, code_verifier=code_verifier)
+
+        def authorization_url(self, **_kwargs):
+            return (f"https://accounts.google.com/o/oauth2/auth?state={self.state}", self.state)
+
+        def fetch_token(self, authorization_response):
+            captured["authorization_response"] = authorization_response
+
+    class FakeResponse:
+        is_success = True
+
+        @staticmethod
+        def json():
+            return {"email": "calendar-admin@example.org"}
+
+    monkeypatch.setattr(google_routes, "Flow", FakeFlow)
+    monkeypatch.setattr(google_routes.httpx, "get", lambda *args, **kwargs: FakeResponse())
+
+    with build_test_client() as client:
+        login(client)
+
+        settings_page = client.get("/settings")
+        settings_csrf = extract_csrf(settings_page.text)
+        client.post(
+            "/settings",
+            data={
+                "district_name": "AthletiSync District",
+                "server_base_url": "https://athletisync.brookfieldr3.org",
+                "timezone": "America/Chicago",
+                "polling_interval_minutes": 30,
+                "event_title_template": "{school} {sport} {level} vs {opponent}",
+                "event_description_template": "School: {school}",
+                "cancellation_behavior": "mark_cancelled",
+                "sync_retry_count": 2,
+                "log_retention_days": 30,
+                "csrf_token": settings_csrf,
+            },
+            follow_redirects=True,
+        )
+
+        google_page = client.get("/google")
+        csrf_token = extract_csrf(google_page.text)
+        start_response = client.post(
+            "/google/oauth/start",
+            data={"name": "District Calendar Manager", "csrf_token": csrf_token},
+            follow_redirects=False,
+        )
+        assert start_response.status_code == 303
+        callback_state = parse_qs(urlsplit(start_response.headers["location"]).query)["state"][0]
+
+        callback_response = client.get(
+            f"/google/oauth/callback?state={callback_state}&code=test-code",
+            follow_redirects=True,
+        )
+        assert callback_response.status_code == 200
+        assert captured["callback_code_verifier"] == "verifier-123"
+        assert "District Calendar Manager" in callback_response.text
+        assert "calendar-admin@example.org" in callback_response.text

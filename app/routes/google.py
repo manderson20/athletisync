@@ -146,6 +146,7 @@ def start_google_oauth(
         include_granted_scopes="true",
         prompt="consent",
     )
+    request.session["google_oauth_code_verifier"] = getattr(flow, "code_verifier", None)
     return RedirectResponse(authorization_url, status_code=303)
 
 
@@ -157,6 +158,7 @@ def google_oauth_callback(
 ):
     expected_state = request.session.pop("google_oauth_state", None)
     profile_name = request.session.pop("google_oauth_profile_name", None)
+    code_verifier = request.session.pop("google_oauth_code_verifier", None)
     state = request.query_params.get("state")
     if not expected_state or not state or not secrets.compare_digest(expected_state, state):
         set_google_banner(request, "error", "Google OAuth state validation failed. Please try again.")
@@ -192,6 +194,7 @@ def google_oauth_callback(
         scopes=[GOOGLE_CALENDAR_SCOPE, "openid", "email"],
         state=state,
         redirect_uri=google_oauth_redirect_uri(request),
+        code_verifier=code_verifier,
     )
     try:
         flow.fetch_token(authorization_response=str(request.url))
