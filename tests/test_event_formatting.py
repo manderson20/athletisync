@@ -131,6 +131,39 @@ def test_build_format_context_formats_human_readable_time_and_sync_timestamp() -
     assert context["last_synced"].endswith("M")
 
 
+def test_build_format_context_normalizes_junior_labels_for_calendar_output() -> None:
+    middle_school_mapping = SyncMapping(
+        school=School(name="Brookfield High School"),
+        school_year=SchoolYear(label="2026-2027"),
+        sport=Sport(name="Music", slug="music"),
+        level=SportLevel(name="Junior High", slug="junior-high"),
+        source_activity_name="Junior High Music",
+    )
+    jv_mapping = SyncMapping(
+        school=School(name="Brookfield High School"),
+        school_year=SchoolYear(label="2026-2027"),
+        sport=Sport(name="Basketball", slug="basketball"),
+        level=SportLevel(name="Junior Varsity", slug="junior-varsity"),
+        source_activity_name="High School Basketball",
+    )
+    source_event = SourceEvent(
+        title="Test Event",
+        opponent="Central",
+        start_at=datetime(2026, 9, 18, 19, 0, tzinfo=UTC),
+        payload={
+            "activity_name": "High School Basketball",
+            "school_year_label": "2026-2027",
+            "row_type": "Home",
+        },
+    )
+
+    middle_school_context = build_format_context(middle_school_mapping, source_event)
+    jv_context = build_format_context(jv_mapping, source_event)
+
+    assert middle_school_context["level"] == "Middle School"
+    assert jv_context["level"] == "JV"
+
+
 def test_render_template_preserves_description_line_breaks() -> None:
     rendered = render_template(
         "Synced from MSHSAA\nLevel: {level}\nSport: {sport}\nLast Synced: {last_synced}",

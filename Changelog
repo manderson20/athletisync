@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.30 - 2026-06-02
+
+- Normalized calendar-event level labels so `Junior High` renders as `Middle School` and `Junior Varsity` renders as `JV` in Google event titles and details.
+- Kept the label remap display-only, so source mappings and MSHSAA activity names remain unchanged while the next sync updates existing Google events in place.
+
 ## 0.1.29 - 2026-06-02
 
 - Fixed Google sync recovery when an existing stored Google event ID has already been deleted remotely by falling back from update to insert on `404` or `410` responses.

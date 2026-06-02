@@ -27,7 +27,7 @@ def build_format_context(
         "district": "",
         "school": _value(mapping.school.name),
         "sport": _value(mapping.sport.name if mapping.sport else payload.get("activity_name")),
-        "level": _value(mapping.level.name if mapping.level else payload.get("level_name")),
+        "level": _display_level(mapping.level.name if mapping.level else payload.get("level_name")),
         "activity": _value(payload.get("activity_name") or mapping.source_activity_name or mapping.sport.name if mapping.sport else ""),
         "opponent": opponent,
         "participants": participants,
@@ -160,6 +160,15 @@ def _display_location(location: str | None, row_type: str) -> str:
     if row_type in {"Home", "Away", "Neutral"}:
         return row_type
     return "TBD"
+
+
+def _display_level(level_name: str | None) -> str:
+    normalized = _value(level_name).strip()
+    if normalized == "Junior High":
+        return "Middle School"
+    if normalized == "Junior Varsity":
+        return "JV"
+    return normalized
 
 
 def _format_clock_time(value: datetime) -> str:
