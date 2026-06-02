@@ -33,6 +33,29 @@ server {
 }
 ```
 
+## Systemd + Nginx On A Single Server
+
+This repository includes ready-to-install examples:
+
+- `deploy/systemd/athletisync.service`
+- `deploy/nginx/athletisync.conf`
+
+Install them on Ubuntu with:
+
+```bash
+sudo cp deploy/systemd/athletisync.service /etc/systemd/system/athletisync.service
+sudo cp deploy/nginx/athletisync.conf /etc/nginx/sites-available/athletisync
+sudo ln -sf /etc/nginx/sites-available/athletisync /etc/nginx/sites-enabled/athletisync
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo systemctl daemon-reload
+sudo systemctl enable --now athletisync
+sudo nginx -t
+sudo systemctl enable --now nginx
+sudo systemctl reload nginx
+```
+
+The app process stays on `127.0.0.1:8000`, while `nginx` serves plain HTTP on port `80`.
+
 ## Backups
 
 - Back up `athletisync.db`

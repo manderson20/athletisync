@@ -2,14 +2,43 @@
 {% block title %}Google Calendars | AthletiSync{% endblock %}
 {% block content %}
 <section class="page-header"><h2>Google Calendar Destinations</h2></section>
+{% if google_banner %}
+<section class="card">
+  <div class="banner {{ google_banner.kind }}">{{ google_banner.message }}</div>
+</section>
+{% endif %}
 <section class="grid-2">
   <article class="card">
-    <h3>Add Auth Profile</h3>
-    <form method="post" action="/google/profiles" class="stack">
+    <div class="section-heading">
+      <h3>Connect Google Account</h3>
+      <details class="help-popover">
+        <summary>Setup Instructions</summary>
+        <div class="help-popover-panel stack">
+          <p class="muted">Recommended setup: connect the dedicated Google account that already manages your calendars.</p>
+          <ol class="help-list">
+            <li>Open <strong>Settings</strong> in AthletiSync and enter the Google OAuth Client ID, Client Secret, and Redirect URI in the <strong>Google OAuth</strong> section.</li>
+            <li>In the form below, enter a profile name such as <code>District Calendar Manager</code>.</li>
+            <li>Click <strong>Start Google Sign-In</strong>.</li>
+            <li>Sign in with the dedicated Google account that already has edit access to the calendars.</li>
+            <li>Approve the requested Google Calendar access.</li>
+            <li>After you return here, AthletiSync saves the connected Google account as an auth profile.</li>
+            <li>Then use <strong>Add Calendar</strong> to save a separate calendar destination record.</li>
+            <li>When you add the calendar destination, enter a label, the exact Google Calendar ID, and select the connected auth profile.</li>
+            <li>Use the <strong>Test Calendar Access</strong> button in the calendar list to confirm that the connected account has writer or owner access to that specific calendar.</li>
+          </ol>
+        </div>
+      </details>
+    </div>
+    <form method="post" action="/google/oauth/start" class="stack">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <label>Name <input name="name" required></label>
-      <label>Service Account JSON <textarea name="service_account_json" rows="8" required></textarea></label>
-      <button class="button" type="submit">Save Profile</button>
+      <label>Profile Name <input name="name" placeholder="District Calendar Manager" required></label>
+      <p class="muted">This saves the Google user account connection. It does not create a calendar destination by itself.</p>
+      {% if google_oauth_ready %}
+      <button class="button" type="submit">Start Google Sign-In</button>
+      {% else %}
+      <div class="banner error">Google OAuth is not configured yet. Open <a href="/settings">Settings</a> and fill in the Google OAuth Client ID, Client Secret, and Redirect URI first.</div>
+      {% endif %}
+      <p class="muted">Current redirect URI: <code>{{ google_oauth_redirect_uri }}</code></p>
     </form>
   </article>
   <article class="card">
@@ -24,18 +53,36 @@
           {% for item in profiles %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
         </select>
       </label>
-      <button class="button" type="submit">Save Calendar</button>
+      <p class="muted">This creates the actual destination calendar record AthletiSync will sync into.</p>
+      <button class="button" type="submit">Save Calendar Destination</button>
     </form>
   </article>
 </section>
 <section class="card">
+  <div class="section-heading">
+    <h3>Legacy Service Account Setup</h3>
+  </div>
+  <details class="help-inline">
+    <summary>Use Service Account JSON Instead</summary>
+    <form method="post" action="/google/profiles" class="stack inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label>Profile Name <input name="name" required></label>
+      <label>Service Account JSON <textarea name="service_account_json" rows="8" required></textarea></label>
+      <p class="muted">Use this only if the service account can actually be granted edit access on the target Google Calendar.</p>
+      <button class="button secondary" type="submit">Save Service Account Profile</button>
+    </form>
+  </details>
+</section>
+<section class="card">
   <h3>Configured Profiles</h3>
   <table>
-    <thead><tr><th>Name</th><th>Connection</th></tr></thead>
+    <thead><tr><th>Name</th><th>Type</th><th>Account</th><th>Connection</th></tr></thead>
     <tbody>
       {% for profile in profiles %}
       <tr>
         <td>{{ profile.name }}</td>
+        <td>{{ "OAuth User" if profile.auth_type == "oauth" else "Service Account" }}</td>
+        <td>{{ profile.oauth_account_email or "n/a" }}</td>
         <td>
           <button
             class="button secondary"
@@ -47,7 +94,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="2">No auth profiles configured.</td></tr>
+      <tr><td colspan="4">No auth profiles configured.</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -56,12 +103,25 @@
 <section class="card">
   <h3>Configured Calendars</h3>
   <table>
-    <thead><tr><th>Name</th><th>Calendar ID</th><th>Profile</th></tr></thead>
+    <thead><tr><th>Name</th><th>Calendar ID</th><th>Profile</th><th>Access</th></tr></thead>
     <tbody>
       {% for item in calendars %}
-      <tr><td>{{ item.display_name }}</td><td>{{ item.calendar_id }}</td><td>{{ item.auth_profile_id or "None" }}</td></tr>
+      <tr>
+        <td>{{ item.display_name }}</td>
+        <td>{{ item.calendar_id }}</td>
+        <td>{{ item.auth_profile.name if item.auth_profile else "None" }}</td>
+        <td>
+          <button
+            class="button secondary"
+            hx-post="/google/calendars/{{ item.id }}/test"
+            hx-target="#google-banner"
+            hx-swap="innerHTML"
+            hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+          >Test Calendar Access</button>
+        </td>
+      </tr>
       {% else %}
-      <tr><td colspan="3">No calendars configured.</td></tr>
+      <tr><td colspan="4">No calendars configured.</td></tr>
       {% endfor %}
     </tbody>
   </table>

@@ -1,24 +1,69 @@
+import secrets
+
+import httpx
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.session import get_db
 from app.dependencies import require_user
-from app.models import GoogleAuthProfile, GoogleCalendar
+from app.models import AppSetting, GoogleAuthProfile, GoogleCalendar
 from app.security import ensure_csrf_token, verify_csrf
 from app.services.google_calendar import DryRunCalendarGateway, GoogleCalendarGateway
 
+try:
+    from google_auth_oauthlib.flow import Flow
+except ImportError:  # pragma: no cover - optional dependency
+    Flow = None
+
 router = APIRouter(prefix="/google", tags=["google"])
+GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar"
+
+
+def pop_google_banner(request: Request) -> dict | None:
+    return request.session.pop("google_banner", None)
+
+
+def set_google_banner(request: Request, kind: str, message: str) -> None:
+    request.session["google_banner"] = {"kind": kind, "message": message}
+
+
+def google_oauth_redirect_uri(request: Request) -> str:
+    app_settings = request.state.google_app_settings if hasattr(request.state, "google_app_settings") else None
+    settings = request.app.state.settings
+    return (
+        (app_settings.google_oauth_redirect_uri if app_settings else None)
+        or settings.google_oauth_redirect_uri
+        or str(request.url_for("google_oauth_callback"))
+    )
+
+
+def get_google_app_settings(db: Session) -> AppSetting:
+    return db.scalar(select(AppSetting)) or AppSetting()
+
+
+def google_oauth_ready(app_settings: AppSetting, request: Request) -> bool:
+    settings = request.app.state.settings
+    client_id = app_settings.google_oauth_client_id or settings.google_oauth_client_id
+    client_secret = app_settings.google_oauth_client_secret or settings.google_oauth_client_secret
+    return bool(client_id and client_secret)
 
 
 @router.get("", response_class=HTMLResponse)
 def google_page(request: Request, db: Session = Depends(get_db), _user=Depends(require_user)):
+    app_settings = get_google_app_settings(db)
+    request.state.google_app_settings = app_settings
     context = {
         "request": request,
         "profiles": db.scalars(select(GoogleAuthProfile).order_by(GoogleAuthProfile.name)).all(),
-        "calendars": db.scalars(select(GoogleCalendar).order_by(GoogleCalendar.display_name)).all(),
+        "calendars": db.scalars(
+            select(GoogleCalendar).options(selectinload(GoogleCalendar.auth_profile)).order_by(GoogleCalendar.display_name)
+        ).all(),
         "csrf_token": ensure_csrf_token(request),
+        "google_banner": pop_google_banner(request),
+        "google_oauth_ready": google_oauth_ready(app_settings, request),
+        "google_oauth_redirect_uri": google_oauth_redirect_uri(request),
     }
     return request.app.state.templates.TemplateResponse(request, "google/index.html", context)
 
@@ -33,8 +78,141 @@ def create_profile(
     _user=Depends(require_user),
 ):
     verify_csrf(request, csrf_token)
-    db.add(GoogleAuthProfile(name=name.strip(), service_account_json=service_account_json.strip()))
+    db.add(
+        GoogleAuthProfile(
+            name=name.strip(),
+            auth_type="service_account",
+            service_account_json=service_account_json.strip(),
+        )
+    )
     db.commit()
+    set_google_banner(request, "success", f"Saved service account profile: {name.strip()}.")
+    return RedirectResponse("/google", status_code=303)
+
+
+@router.post("/oauth/start")
+def start_google_oauth(
+    request: Request,
+    name: str = Form(...),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    _user=Depends(require_user),
+):
+    verify_csrf(request, csrf_token)
+    app_settings = get_google_app_settings(db)
+    request.state.google_app_settings = app_settings
+    settings = request.app.state.settings
+    if Flow is None:
+        set_google_banner(request, "error", "Install AthletiSync with the google extra to enable Google OAuth.")
+        return RedirectResponse("/google", status_code=303)
+    client_id = app_settings.google_oauth_client_id or settings.google_oauth_client_id
+    client_secret = app_settings.google_oauth_client_secret or settings.google_oauth_client_secret
+    if not client_id or not client_secret:
+        set_google_banner(
+            request,
+            "error",
+            "Missing Google OAuth client settings. Open Settings and fill in the Google OAuth section first.",
+        )
+        return RedirectResponse("/google", status_code=303)
+
+    state = secrets.token_urlsafe(32)
+    request.session["google_oauth_state"] = state
+    request.session["google_oauth_profile_name"] = name.strip()
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=[GOOGLE_CALENDAR_SCOPE, "openid", "email"],
+        state=state,
+        redirect_uri=google_oauth_redirect_uri(request),
+    )
+    authorization_url, _ = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="consent",
+    )
+    return RedirectResponse(authorization_url, status_code=303)
+
+
+@router.get("/oauth/callback", name="google_oauth_callback")
+def google_oauth_callback(
+    request: Request,
+    db: Session = Depends(get_db),
+    _user=Depends(require_user),
+):
+    expected_state = request.session.pop("google_oauth_state", None)
+    profile_name = request.session.pop("google_oauth_profile_name", None)
+    state = request.query_params.get("state")
+    if not expected_state or not state or not secrets.compare_digest(expected_state, state):
+        set_google_banner(request, "error", "Google OAuth state validation failed. Please try again.")
+        return RedirectResponse("/google", status_code=303)
+    if not profile_name:
+        set_google_banner(request, "error", "Missing pending Google OAuth profile name. Please try again.")
+        return RedirectResponse("/google", status_code=303)
+    if db.scalar(select(GoogleAuthProfile).where(GoogleAuthProfile.name == profile_name)):
+        set_google_banner(request, "error", f"A Google auth profile named '{profile_name}' already exists.")
+        return RedirectResponse("/google", status_code=303)
+
+    app_settings = get_google_app_settings(db)
+    request.state.google_app_settings = app_settings
+    settings = request.app.state.settings
+    if Flow is None:
+        set_google_banner(request, "error", "Install AthletiSync with the google extra to enable Google OAuth.")
+        return RedirectResponse("/google", status_code=303)
+    client_id = app_settings.google_oauth_client_id or settings.google_oauth_client_id
+    client_secret = app_settings.google_oauth_client_secret or settings.google_oauth_client_secret
+    if not client_id or not client_secret:
+        set_google_banner(request, "error", "Missing Google OAuth client settings. Open Settings and fill them in.")
+        return RedirectResponse("/google", status_code=303)
+
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=[GOOGLE_CALENDAR_SCOPE, "openid", "email"],
+        state=state,
+        redirect_uri=google_oauth_redirect_uri(request),
+    )
+    try:
+        flow.fetch_token(authorization_response=str(request.url))
+    except Exception as exc:  # pragma: no cover - network callback path
+        set_google_banner(request, "error", f"Google OAuth token exchange failed: {exc}")
+        return RedirectResponse("/google", status_code=303)
+
+    credentials = flow.credentials
+    account_email = None
+    if credentials.token:
+        try:
+            response = httpx.get(
+                "https://openidconnect.googleapis.com/v1/userinfo",
+                headers={"Authorization": f"Bearer {credentials.token}"},
+                timeout=10.0,
+            )
+            if response.is_success:
+                account_email = response.json().get("email")
+        except httpx.HTTPError:
+            account_email = None
+    db.add(
+        GoogleAuthProfile(
+            name=profile_name,
+            auth_type="oauth",
+            oauth_account_email=account_email,
+            oauth_refresh_token=credentials.refresh_token,
+            oauth_scopes=" ".join(credentials.scopes or [GOOGLE_CALENDAR_SCOPE]),
+        )
+    )
+    db.commit()
+    set_google_banner(request, "success", f"Saved OAuth profile: {profile_name}. Now add a calendar below.")
     return RedirectResponse("/google", status_code=303)
 
 
@@ -57,6 +235,7 @@ def create_calendar(
         )
     )
     db.commit()
+    set_google_banner(request, "success", f"Saved calendar destination: {display_name.strip()}.")
     return RedirectResponse("/google", status_code=303)
 
 
@@ -65,10 +244,32 @@ def test_profile(profile_id: int, request: Request, db: Session = Depends(get_db
     verify_csrf(request, request.headers.get("X-CSRF-Token"))
     profile = db.get(GoogleAuthProfile, profile_id)
     try:
-        gateway = GoogleCalendarGateway(profile) if profile else DryRunCalendarGateway()
+        app_settings = get_google_app_settings(db)
+        gateway = GoogleCalendarGateway(profile, app_settings=app_settings) if profile else DryRunCalendarGateway()
         ok, message = gateway.test_connection()
     except Exception as exc:  # pragma: no cover - UI fallback path
         ok, message = False, str(exc)
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "partials/banner.html",
+        {"request": request, "kind": "success" if ok else "error", "message": message},
+    )
+
+
+@router.post("/calendars/{calendar_id}/test", response_class=HTMLResponse)
+def test_calendar(calendar_id: int, request: Request, db: Session = Depends(get_db), _user=Depends(require_user)):
+    verify_csrf(request, request.headers.get("X-CSRF-Token"))
+    calendar = db.get(GoogleCalendar, calendar_id)
+    if not calendar or not calendar.auth_profile_id:
+        ok, message = False, "This calendar is missing an auth profile."
+    else:
+        profile = db.get(GoogleAuthProfile, calendar.auth_profile_id)
+        try:
+            app_settings = get_google_app_settings(db)
+            gateway = GoogleCalendarGateway(profile, app_settings=app_settings) if profile else DryRunCalendarGateway()
+            ok, message = gateway.test_calendar_access(calendar.calendar_id)
+        except Exception as exc:  # pragma: no cover - UI fallback path
+            ok, message = False, str(exc)
     return request.app.state.templates.TemplateResponse(
         request,
         "partials/banner.html",

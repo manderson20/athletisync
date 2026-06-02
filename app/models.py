@@ -30,6 +30,10 @@ class AppSetting(Base):
     timezone: Mapped[str] = mapped_column(String(64), default="America/Chicago")
     polling_interval_minutes: Mapped[int] = mapped_column(Integer, default=30)
     default_school_year_label: Mapped[str] = mapped_column(String(16), default="2025-2026")
+    event_title_template: Mapped[str] = mapped_column(
+        Text,
+        default="{school} {sport} {level} vs {opponent}",
+    )
     event_description_template: Mapped[str] = mapped_column(
         Text,
         default=(
@@ -46,6 +50,9 @@ class AppSetting(Base):
     cancellation_behavior: Mapped[str] = mapped_column(String(32), default="mark_cancelled")
     sync_retry_count: Mapped[int] = mapped_column(Integer, default=2)
     log_retention_days: Mapped[int] = mapped_column(Integer, default=30)
+    google_oauth_client_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    google_oauth_client_secret: Mapped[str | None] = mapped_column(Text, nullable=True)
+    google_oauth_redirect_uri: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class SchoolYear(Base):
@@ -76,6 +83,8 @@ class Sport(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), unique=True)
     slug: Mapped[str] = mapped_column(String(128), unique=True)
+    event_title_template_override: Mapped[str | None] = mapped_column(Text, nullable=True)
+    event_description_template_override: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     mappings: Mapped[list["SyncMapping"]] = relationship(back_populates="sport")
 
@@ -95,7 +104,11 @@ class GoogleAuthProfile(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), unique=True)
-    service_account_json: Mapped[str] = mapped_column(Text)
+    auth_type: Mapped[str] = mapped_column(String(32), default="service_account")
+    service_account_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    oauth_account_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    oauth_refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    oauth_scopes: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     calendars: Mapped[list["GoogleCalendar"]] = relationship(back_populates="auth_profile")
@@ -133,6 +146,8 @@ class SyncMapping(Base):
     sport_id: Mapped[int | None] = mapped_column(ForeignKey("sports.id"), nullable=True)
     level_id: Mapped[int | None] = mapped_column(ForeignKey("sport_levels.id"), nullable=True)
     google_calendar_id: Mapped[int | None] = mapped_column(ForeignKey("google_calendars.id"), nullable=True)
+    source_activity_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    source_activity_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     sync_behavior: Mapped[str] = mapped_column(String(32), default="standard")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

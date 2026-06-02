@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = 20
 
     reverse_proxy_header: str = "X-Forwarded-Proto"
+    google_oauth_client_id: str | None = None
+    google_oauth_client_secret: str | None = None
+    google_oauth_redirect_uri: str | None = None
 
     @computed_field
     @property

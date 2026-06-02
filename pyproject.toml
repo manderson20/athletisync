@@ -1,6 +1,6 @@
 [project]
 name = "athletisync"
-version = "0.1.10"
+version = "0.1.12"
 description = "Lightweight self-hosted app that syncs MSHSAA athletic schedules to Google Calendar."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -23,6 +23,7 @@ dependencies = [
 google = [
   "google-api-python-client>=2.149.0",
   "google-auth>=2.35.0",
+  "google-auth-oauthlib>=1.2.1",
 ]
 dev = [
   "pytest>=8.3.3",

@@ -1,0 +1,16 @@
+[Unit]
+Description=AthletiSync web application
+After=network.target
+
+[Service]
+Type=simple
+User=itadmin
+Group=itadmin
+WorkingDirectory=/home/itadmin/athletisync
+EnvironmentFile=/home/itadmin/athletisync/.env
+ExecStart=/home/itadmin/athletisync/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

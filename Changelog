@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.1.16 - 2026-06-02
+
+- Added Google OAuth user-auth support for calendar sync, so districts can connect the dedicated Google calendar manager account instead of relying only on service-account JSON keys.
+- Moved Google OAuth client configuration into the AthletiSync settings UI, with environment-variable fallback still supported for server-managed deployments.
+- Reworked the Google page into a clearer two-step flow: connect an auth profile first, then save a calendar destination and test that specific calendar's access.
+
+## 0.1.15 - 2026-04-11
+
+- Hardened MSHSAA event identity to prefer stable public event references like `comp` and `tournament` when available.
+- Updated sync event normalization so Google Calendar updates reuse stable MSHSAA matchup and tournament references instead of depending on mutable fields like title, opponent, or start time.
+- Added coverage proving that rescheduled events with the same MSHSAA event reference keep the same internal source key.
+
+## 0.1.14 - 2026-04-11
+
+- Removed `Sports & Levels` and `Mappings` from the main navigation so the primary admin flow stays centered on MSHSAA source review.
+- Moved mapping creation into the schedule preview panel on the MSHSAA source review page, including Google Calendar selection and optional level selection from the discovered schedule.
+- Updated mapping saves to auto-create the underlying sport and level records when needed, so admins no longer need to manage those catalog pages directly.
+
+## 0.1.13 - 2026-04-11
+
+- Added sport-specific event formatter overrides so title and description patterns can be configured once per sport instead of per school year.
+- Expanded formatter previews to show standard matchup, tournament, and multi-team examples using the same placeholder system as live Google event sync.
+- Improved sync payload formatting so templates can use both a primary opponent and the full participant list for sports like golf, wrestling, and tournaments.
+
+## 0.1.12 - 2026-04-11
+
+- Added explicit school-year selection on the MSHSAA source review page so schedule previews can load future-year events directly instead of defaulting to the currently selected source year.
+
+## 0.1.11 - 2026-04-11
+
+- Fixed school-year discovery by probing MSHSAA activity schedule pages when the generic school schedule page exposes an empty year selector.
+- Updated live sync year selection so future years exposed by MSHSAA activity pages can be discovered and used.
+
 ## 0.1.10 - 2026-04-11
 
 - Made the left navigation sidebar sticky so the menu remains visible while scrolling long pages.

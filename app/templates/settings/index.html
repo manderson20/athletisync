@@ -8,7 +8,26 @@
     <label>District Name <input name="district_name" value="{{ settings.district_name }}" required></label>
     <label>Timezone <input name="timezone" value="{{ settings.timezone }}" required></label>
     <label>Polling Interval Minutes <input name="polling_interval_minutes" type="number" min="5" value="{{ settings.polling_interval_minutes }}" required></label>
-    <label>Default School Year <input name="default_school_year_label" value="{{ settings.default_school_year_label }}" required></label>
+    <div class="card inset-card">
+      <strong>School Year Handling</strong>
+      <p class="muted">AthletiSync now uses automatic school-year handling. Current default behavior is <strong>{{ automatic_school_year_label }}</strong>.</p>
+      <p class="muted">Current calculated school year: {{ current_school_year_label }}. When MSHSAA exposes future years, AthletiSync stores those years automatically and should use them for future schedules.</p>
+    </div>
+    <label>Event Title Template <input name="event_title_template" value="{{ settings.event_title_template }}" required></label>
+    <label>Event Description Template <textarea name="event_description_template" rows="8" required>{{ settings.event_description_template }}</textarea></label>
+    <p class="muted">Available placeholders include: <code>{school}</code>, <code>{sport}</code>, <code>{level}</code>, <code>{activity}</code>, <code>{opponent}</code>, <code>{participants}</code>, <code>{location}</code>, <code>{school_year}</code>, <code>{date}</code>, <code>{time}</code>, <code>{event_type}</code>.</p>
+    <p class="muted">Use these as your district-wide defaults. If a specific sport like golf or wrestling needs a different title pattern, add a sport override on <a href="/catalog">Sports &amp; Levels</a>.</p>
+    <button
+      class="button secondary"
+      type="button"
+      hx-post="/settings/preview-format"
+      hx-target="#formatter-preview"
+      hx-swap="innerHTML"
+      hx-include="closest form"
+    >Preview Formatter</button>
+    <div id="formatter-preview">
+      {% include "partials/formatter_preview.html" %}
+    </div>
     <label>Cancellation Behavior
       <select name="cancellation_behavior">
         <option value="mark_cancelled" {% if settings.cancellation_behavior == "mark_cancelled" %}selected{% endif %}>Mark Cancelled</option>
@@ -17,6 +36,14 @@
     </label>
     <label>Sync Retry Count <input name="sync_retry_count" type="number" min="0" value="{{ settings.sync_retry_count }}" required></label>
     <label>Log Retention Days <input name="log_retention_days" type="number" min="1" value="{{ settings.log_retention_days }}" required></label>
+    <div class="card inset-card">
+      <strong>Google OAuth</strong>
+      <p class="muted">Configure the Google OAuth client here so admins can connect the dedicated calendar manager account from the Google page.</p>
+      <label>Google OAuth Client ID <input name="google_oauth_client_id" value="{{ settings.google_oauth_client_id or '' }}"></label>
+      <label>Google OAuth Client Secret <input name="google_oauth_client_secret" value="{{ settings.google_oauth_client_secret or '' }}"></label>
+      <label>Google OAuth Redirect URI <input name="google_oauth_redirect_uri" value="{{ settings.google_oauth_redirect_uri or '' }}" placeholder="http://172.16.1.77/google/oauth/callback"></label>
+      <p class="muted">Use the exact same redirect URI in Google Cloud for your OAuth web client.</p>
+    </div>
     <button class="button" type="submit">Save Settings</button>
   </form>
 </section>

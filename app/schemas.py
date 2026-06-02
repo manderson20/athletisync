@@ -14,10 +14,14 @@ class SettingsFormData(BaseModel):
     district_name: str
     timezone: str
     polling_interval_minutes: int = Field(ge=5, le=1440)
-    default_school_year_label: str
+    event_title_template: str
+    event_description_template: str
     cancellation_behavior: str
     sync_retry_count: int = Field(ge=0, le=10)
     log_retention_days: int = Field(ge=1, le=365)
+    google_oauth_client_id: str | None = None
+    google_oauth_client_secret: str | None = None
+    google_oauth_redirect_uri: str | None = None
 
 
 class MappingFormData(BaseModel):
@@ -26,12 +30,15 @@ class MappingFormData(BaseModel):
     sport_id: int | None = None
     level_id: int | None = None
     google_calendar_id: int | None = None
+    source_activity_id: str | None = None
+    source_activity_name: str | None = None
     enabled: bool = True
     sync_behavior: str = "standard"
     notes: str | None = None
 
 
 class NormalizedEvent(BaseModel):
+    school_year_label: str | None = None
     source_reference: str | None = None
     title: str
     opponent: str | None = None
