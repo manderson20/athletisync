@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.19 - 2026-06-02
+
+- Rewrote the Google page setup instructions to explicitly walk admins through Google Cloud Console, including exactly where to create the OAuth client and where to copy the Client ID and Client Secret from.
+- Added clearer field-to-field mapping on the Google page so the OAuth configuration can be completed without leaving administrators guessing what belongs in each AthletiSync field.
+
 ## 0.1.18 - 2026-06-02
 
 - Clarified the Google page setup copy so admins can see that the page is where they add the Google account connection AthletiSync will use for calendar access.

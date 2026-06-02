@@ -18,6 +18,7 @@
     <label>Google OAuth Redirect URI <input name="google_oauth_redirect_uri" value="{{ google_settings.google_oauth_redirect_uri or google_oauth_redirect_uri }}"></label>
     <p class="muted">Use the exact same redirect URI in Google Cloud for your OAuth web client.</p>
     <p class="muted">This URI does not need a public domain. It only needs to be reachable by the browser you use during Google sign-in. If you access AthletiSync at <code>http://172.16.1.77</code>, then the redirect URI can also use <code>http://172.16.1.77</code>.</p>
+    <p class="muted">Get the Client ID and Client Secret from Google Cloud Console: <strong>APIs &amp; Services</strong> -> <strong>Credentials</strong> -> <strong>Create Credentials</strong> -> <strong>OAuth client ID</strong> -> <strong>Web application</strong>.</p>
     <button class="button secondary" type="submit">Save Google OAuth Configuration</button>
   </form>
 </section>
@@ -30,15 +31,27 @@
         <div class="help-popover-panel stack">
           <p class="muted">Use this section to add the Google account AthletiSync should use for calendar access.</p>
           <ol class="help-list">
-            <li>Fill in the <strong>Google OAuth Configuration</strong> section on this page and save it.</li>
-            <li>In the form below, enter a profile name such as <code>District Calendar Manager</code>.</li>
+            <li>Open <code>https://console.cloud.google.com/</code>.</li>
+            <li>Create or select a Google Cloud project.</li>
+            <li>Open <strong>APIs &amp; Services</strong> -> <strong>Library</strong>.</li>
+            <li>Search for <strong>Google Calendar API</strong> and click <strong>Enable</strong>.</li>
+            <li>Open <strong>APIs &amp; Services</strong> -> <strong>Credentials</strong>.</li>
+            <li>Click <strong>Create Credentials</strong> -> <strong>OAuth client ID</strong>.</li>
+            <li>If Google asks you to configure the consent screen first, do that and then come back to the credentials page.</li>
+            <li>For application type, choose <strong>Web application</strong>.</li>
+            <li>Under <strong>Authorized redirect URIs</strong>, add <code>{{ google_oauth_redirect_uri }}</code>.</li>
+            <li>After Google creates the OAuth client, copy the <strong>Client ID</strong> into <strong>Google OAuth Client ID</strong> on this page.</li>
+            <li>Copy the <strong>Client secret</strong> into <strong>Google OAuth Client Secret</strong> on this page.</li>
+            <li>Copy <code>{{ google_oauth_redirect_uri }}</code> into <strong>Google OAuth Redirect URI</strong> on this page if it is not already correct.</li>
+            <li>Click <strong>Save Google OAuth Configuration</strong>.</li>
+            <li>In the form below, enter a connection name such as <code>District Calendar Manager</code>.</li>
             <li>Click <strong>Sign In With Google</strong>.</li>
             <li>Sign in with the Google account that already has access to the calendar you want AthletiSync to manage.</li>
             <li>Approve the requested Google Calendar access.</li>
             <li>After Google sends you back to this page, AthletiSync saves that Google account as an auth profile.</li>
             <li>Repeat this section again if you want to connect a second Google account.</li>
             <li>Then use <strong>Add Calendar</strong> to save a separate calendar destination record.</li>
-            <li>When you add the calendar destination, enter a label, the exact Google Calendar ID, and select the connected auth profile.</li>
+            <li>When you add the calendar destination, enter any label you want in <strong>Display Name</strong>, paste the exact Google <strong>Calendar ID</strong>, and select the connected auth profile.</li>
             <li>Use the <strong>Test Calendar Access</strong> button in the calendar list to confirm that the connected account has writer or owner access to that specific calendar.</li>
           </ol>
         </div>

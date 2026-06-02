@@ -240,6 +240,8 @@ def test_google_page_shows_oauth_guidance() -> None:
         assert "Sign In With Google" in response.text
         assert "Save Calendar Destination" in response.text
         assert "Current redirect URI" in response.text
+        assert "Create Credentials" in response.text
+        assert "OAuth client ID" in response.text
 
 
 def test_can_save_google_oauth_settings_on_google_page() -> None:
