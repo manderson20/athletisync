@@ -32,6 +32,8 @@ def set_google_banner(request: Request, kind: str, message: str) -> None:
 def google_oauth_redirect_uri(request: Request) -> str:
     app_settings = request.state.google_app_settings if hasattr(request.state, "google_app_settings") else None
     settings = request.app.state.settings
+    if app_settings and app_settings.server_base_url:
+        return f"{app_settings.server_base_url.rstrip('/')}/google/oauth/callback"
     return (
         (app_settings.google_oauth_redirect_uri if app_settings else None)
         or settings.google_oauth_redirect_uri

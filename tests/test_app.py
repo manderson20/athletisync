@@ -80,6 +80,7 @@ def test_settings_update_creates_school_year() -> None:
             "/settings",
             data={
                 "district_name": "Central District",
+                "server_base_url": "http://172.16.1.77",
                 "timezone": "America/Chicago",
                 "polling_interval_minutes": 30,
                 "event_title_template": "{school} {sport} {level} vs {opponent}",
@@ -94,6 +95,7 @@ def test_settings_update_creates_school_year() -> None:
 
         assert response.status_code == 200
         assert "Automatic school-year handling" in response.text or "School Year Handling" in response.text
+        assert 'value="http://172.16.1.77"' in response.text
 
 
 def test_import_sport_from_school_flow() -> None:
@@ -242,6 +244,32 @@ def test_google_page_shows_oauth_guidance() -> None:
         assert "Current redirect URI" in response.text
         assert "Create Credentials" in response.text
         assert "OAuth client ID" in response.text
+
+
+def test_google_page_uses_server_base_url_for_redirect_hint() -> None:
+    with build_test_client() as client:
+        login(client)
+        settings_page = client.get("/settings")
+        settings_csrf = extract_csrf(settings_page.text)
+        client.post(
+            "/settings",
+            data={
+                "district_name": "AthletiSync District",
+                "server_base_url": "http://172.16.1.77",
+                "timezone": "America/Chicago",
+                "polling_interval_minutes": 30,
+                "event_title_template": "{school} {sport} {level} vs {opponent}",
+                "event_description_template": "School: {school}",
+                "cancellation_behavior": "mark_cancelled",
+                "sync_retry_count": 2,
+                "log_retention_days": 30,
+                "csrf_token": settings_csrf,
+            },
+            follow_redirects=True,
+        )
+        response = client.get("/google")
+        assert response.status_code == 200
+        assert "http://172.16.1.77/google/oauth/callback" in response.text
 
 
 def test_can_save_google_oauth_settings_on_google_page() -> None:

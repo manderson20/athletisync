@@ -4,7 +4,7 @@ AthletiSync is a lightweight self-hosted web application that syncs MSHSAA athle
 
 ## Current MVP
 
-Version: `0.1.17`
+Version: `0.1.20`
 
 The current MVP includes:
 

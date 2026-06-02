@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.20 - 2026-06-02
+
+- Added a deployment-level `Server Base URL` setting so each school can define its own host or IP once and let the Google OAuth callback URI populate from that value.
+- Updated the Google setup flow to derive the callback hint from the configured server URL instead of relying on a hardcoded or manually guessed address.
+
 ## 0.1.19 - 2026-06-02
 
 - Rewrote the Google page setup instructions to explicitly walk admins through Google Cloud Console, including exactly where to create the OAuth client and where to copy the Client ID and Client Secret from.

@@ -39,6 +39,7 @@ def settings_page(request: Request, db: Session = Depends(get_db), _user=Depends
 def save_settings(
     request: Request,
     district_name: str = Form(...),
+    server_base_url: str = Form(default=""),
     timezone: str = Form(...),
     polling_interval_minutes: int = Form(...),
     event_title_template: str = Form(...),
@@ -53,6 +54,7 @@ def save_settings(
     verify_csrf(request, csrf_token)
     payload = SettingsFormData(
         district_name=district_name,
+        server_base_url=(server_base_url or "").strip().rstrip("/") or None,
         timezone=timezone,
         polling_interval_minutes=polling_interval_minutes,
         event_title_template=event_title_template,
@@ -77,6 +79,7 @@ def save_settings(
 def preview_format(
     request: Request,
     district_name: str = Form(...),
+    server_base_url: str = Form(default=""),
     timezone: str = Form(...),
     polling_interval_minutes: int = Form(...),
     event_title_template: str = Form(...),
@@ -90,6 +93,7 @@ def preview_format(
     verify_csrf(request, csrf_token)
     settings = AppSetting(
         district_name=district_name,
+        server_base_url=(server_base_url or "").strip().rstrip("/") or None,
         timezone=timezone,
         polling_interval_minutes=polling_interval_minutes,
         event_title_template=event_title_template,

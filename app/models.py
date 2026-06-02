@@ -27,6 +27,7 @@ class AppSetting(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     district_name: Mapped[str] = mapped_column(String(255), default="AthletiSync District")
+    server_base_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="America/Chicago")
     polling_interval_minutes: Mapped[int] = mapped_column(Integer, default=30)
     default_school_year_label: Mapped[str] = mapped_column(String(16), default="2025-2026")

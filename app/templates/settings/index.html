@@ -6,6 +6,8 @@
   <form method="post" class="stack">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <label>District Name <input name="district_name" value="{{ settings.district_name }}" required></label>
+    <label>Server Base URL <input name="server_base_url" value="{{ settings.server_base_url or '' }}" placeholder="http://172.16.1.77"></label>
+    <p class="muted">Set the URL users use to reach this AthletiSync server. Google OAuth redirect defaults are built from this value for each deployment.</p>
     <label>Timezone <input name="timezone" value="{{ settings.timezone }}" required></label>
     <label>Polling Interval Minutes <input name="polling_interval_minutes" type="number" min="5" value="{{ settings.polling_interval_minutes }}" required></label>
     <div class="card inset-card">

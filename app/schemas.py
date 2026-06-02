@@ -12,6 +12,7 @@ class LoginFormData(BaseModel):
 
 class SettingsFormData(BaseModel):
     district_name: str
+    server_base_url: str | None = None
     timezone: str
     polling_interval_minutes: int = Field(ge=5, le=1440)
     event_title_template: str
