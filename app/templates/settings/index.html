@@ -8,7 +8,14 @@
     <label>District Name <input name="district_name" value="{{ settings.district_name }}" required></label>
     <label>Server Base URL <input name="server_base_url" value="{{ settings.server_base_url or '' }}" placeholder="http://172.16.1.77"></label>
     <p class="muted">Set the URL users use to reach this AthletiSync server. Google OAuth redirect defaults are built from this value for each deployment.</p>
-    <label>Timezone <input name="timezone" value="{{ settings.timezone }}" required></label>
+    <label>Timezone
+      <select name="timezone" required>
+        {% for option in timezone_options %}
+        <option value="{{ option }}" {% if settings.timezone == option %}selected{% endif %}>{{ option }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <p class="muted">Choose the district's local timezone. Event detail times and sync timestamps will be rendered using this timezone.</p>
     <label>Polling Interval Minutes <input name="polling_interval_minutes" type="number" min="5" value="{{ settings.polling_interval_minutes }}" required></label>
     <div class="card inset-card">
       <strong>School Year Handling</strong>

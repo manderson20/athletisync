@@ -4,7 +4,7 @@
 <section class="page-header">
   <div>
     <h2>{{ settings.district_name }}</h2>
-    <p class="muted">School year {{ settings.default_school_year_label }} · Poll every {{ settings.polling_interval_minutes }} minutes · Next scheduled sync in about {{ next_sync_minutes }} minutes</p>
+    <p class="muted">School year {{ settings.default_school_year_label }} · Poll every {{ settings.polling_interval_minutes }} minutes · Next scheduled sync at {{ next_poll_at }}</p>
   </div>
   <form method="post" action="/sync/run">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

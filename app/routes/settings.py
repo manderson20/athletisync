@@ -13,6 +13,15 @@ from app.services.school_years import AUTOMATIC_SCHOOL_YEAR_LABEL, current_schoo
 from app.services.url_helpers import normalize_server_base_url
 
 router = APIRouter(prefix="/settings", tags=["settings"])
+COMMON_TIMEZONES = [
+    "America/Chicago",
+    "America/New_York",
+    "America/Denver",
+    "America/Los_Angeles",
+    "America/Phoenix",
+    "America/Anchorage",
+    "Pacific/Honolulu",
+]
 
 
 @router.get("", response_class=HTMLResponse)
@@ -29,6 +38,7 @@ def settings_page(request: Request, db: Session = Depends(get_db), _user=Depends
             "request": request,
             "settings": settings,
             "formatter_preview": preview_event_format(settings),
+            "timezone_options": COMMON_TIMEZONES,
             "automatic_school_year_label": AUTOMATIC_SCHOOL_YEAR_LABEL,
             "current_school_year_label": current_school_year_label(),
             "csrf_token": ensure_csrf_token(request),

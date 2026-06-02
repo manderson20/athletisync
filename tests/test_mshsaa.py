@@ -1,6 +1,11 @@
 from datetime import UTC, datetime
 
-from app.integrations.mshsaa import MSHSAAClient, build_source_event_key
+from app.integrations.mshsaa import (
+    MSHSAAClient,
+    build_source_event_key,
+    extract_stable_event_reference,
+    row_has_schedulable_date,
+)
 from app.config import Settings
 
 
@@ -42,6 +47,39 @@ def test_source_event_key_is_stable() -> None:
 
     key_one = build_source_event_key("2026-2027", "Central", "Volleyball", "Varsity", event)
     key_two = build_source_event_key("2026-2027", "Central", "Volleyball", "Varsity", event)
+
+    assert key_one == key_two
+
+
+def test_source_event_key_prefers_stable_reference_over_mutable_fields() -> None:
+    client = MSHSAAClient(Settings())
+    original = client.normalize_schedule_payload(
+        {
+            "events": [
+                {
+                    "id": "https://www.mshsaa.org/MySchool/Matchup.aspx?s=244&alg=19&comp=2708571",
+                    "title": "Football vs Monroe City",
+                    "opponent": "Monroe City",
+                    "start": "2026-08-28T19:00:00Z",
+                }
+            ]
+        }
+    )[0]
+    changed = client.normalize_schedule_payload(
+        {
+            "events": [
+                {
+                    "id": "https://www.mshsaa.org/MySchool/Matchup.aspx?s=244&alg=19&comp=2708571",
+                    "title": "Football vs Monroe City - Weather Make-up",
+                    "opponent": "Monroe City",
+                    "start": "2026-08-29T16:00:00Z",
+                }
+            ]
+        }
+    )[0]
+
+    key_one = build_source_event_key("2026-2027", "Central", "Football", "Varsity", original)
+    key_two = build_source_event_key("2026-2027", "Central", "Football", "Varsity", changed)
 
     assert key_one == key_two
 
@@ -140,6 +178,7 @@ def test_parse_schedule_rows_and_levels() -> None:
             "row_type": "Home",
             "opponent_url": "https://www.mshsaa.org/foo",
             "matchup_url": "https://www.mshsaa.org/matchup",
+            "stable_reference": None,
         }
     ]
 
@@ -156,3 +195,37 @@ def test_parse_selected_school_year() -> None:
     )
 
     assert year == "2025-2026"
+
+
+def test_parse_available_school_years() -> None:
+    client = MSHSAAClient(Settings())
+    years = client.parse_available_school_years(
+        """
+        <select id="ctl00_contentMain_drpYear">
+          <option value="2027">2027-2028</option>
+          <option value="2026">2026-2027</option>
+          <option selected="selected" value="2025">2025-2026</option>
+        </select>
+        """
+    )
+
+    assert years == ["2027-2028", "2026-2027", "2025-2026"]
+
+
+def test_extract_stable_event_reference() -> None:
+    assert (
+        extract_stable_event_reference("https://www.mshsaa.org/MySchool/Matchup.aspx?s=244&alg=19&comp=2708571")
+        == "comp:2708571"
+    )
+    assert (
+        extract_stable_event_reference("https://www.mshsaa.org/MySchool/Tournament.aspx?s=244&alg=19&tournament=573131")
+        == "tournament:573131"
+    )
+    assert extract_stable_event_reference("https://www.mshsaa.org/MySchool/Schedule.aspx?s=134&alg=19&year=2026") is None
+
+
+def test_row_has_schedulable_date_requires_a_real_month_day_value() -> None:
+    assert row_has_schedulable_date({"date": "9/15"}) is True
+    assert row_has_schedulable_date({"date": "5/31-12/6"}) is True
+    assert row_has_schedulable_date({"date": "⤷ 11"}) is False
+    assert row_has_schedulable_date({"date": ""}) is False

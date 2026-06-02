@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.28 - 2026-06-02
+
+- Updated the dashboard to show the actual next scheduled poll time instead of only an approximate minute interval.
+- Filled in event-detail `Location` with `TBD` when MSHSAA does not provide a venue or home/away marker, avoiding blank location lines in Google Calendar.
+- Preserved the multiline event detail formatting while keeping the stale-event cleanup and timezone-aware detail formatting in place.
+
+## 0.1.27 - 2026-06-02
+
+- Added a timezone dropdown in Settings and applied the selected timezone to human-readable event detail times and sync timestamps.
+- Kept Google Calendar pairing available even when an MSHSAA activity currently has no posted events, so calendars can be preconfigured before schedules are published.
+- Added stale-event reconciliation so Google Calendar entries that disappear from MSHSAA are now removed or marked cancelled based on the district's cancellation setting instead of being left behind as duplicates.
+
+## 0.1.26 - 2026-06-02
+
+- Restored the ability to pre-pair an MSHSAA activity to a Google Calendar before any events are posted, while keeping the source-review UI explicit that sync will wait until real event dates appear.
+- Timed MSHSAA events that only provide a start time now default to a two-hour duration in Google Calendar, so they no longer import as zero-length events.
+- Removed redundant home/away wording from event titles so away games can read naturally as `... at Monroe City` without an extra `at Away` suffix.
+
+## 0.1.25 - 2026-06-02
+
+- Blocked Google Calendar pairing for MSHSAA activities that do not have any schedulable event dates yet, including backend validation so empty activities cannot be assigned through manual or edit flows.
+- Updated the MSHSAA preview UI to explain when an activity exists but does not yet have real posted events, and hid the mapping form until schedulable rows appear.
+- Removed fake fallback locations like `Home` and `Away` from event formatting so titles no longer end with redundant text such as `at Away` or `at Home`.
+
 ## 0.1.24 - 2026-06-02
 
 - Fixed Google Calendar timed event payloads to include a time zone, resolving Google API failures such as `Missing time zone definition for start time`.

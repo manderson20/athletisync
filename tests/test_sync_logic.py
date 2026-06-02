@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.models import AppSetting, School, SchoolYear, Sport, SyncMapping
 from app.schemas import MappingFormData
@@ -46,8 +46,10 @@ def test_parse_row_datetime_accepts_ranged_date_text() -> None:
     service = SyncService(db=None)  # type: ignore[arg-type]
     start_at, end_at, is_all_day = service._parse_row_datetime("5/31-12/6", "7:00 PM", "2026-2027")
     assert start_at is not None
+    assert end_at is not None
     assert start_at.month == 5
     assert start_at.day == 31
+    assert end_at - start_at == timedelta(hours=2)
     assert is_all_day is False
 
 
@@ -57,6 +59,15 @@ def test_parse_row_datetime_skips_continuation_marker_rows() -> None:
     assert start_at is None
     assert end_at is None
     assert is_all_day is True
+
+
+def test_parse_row_datetime_defaults_timed_events_to_two_hours() -> None:
+    service = SyncService(db=None)  # type: ignore[arg-type]
+    start_at, end_at, is_all_day = service._parse_row_datetime("09/01", "7:00 PM", "2026-2027")
+    assert start_at is not None
+    assert end_at is not None
+    assert end_at - start_at == timedelta(hours=2)
+    assert is_all_day is False
 
 
 def test_sync_event_key_uses_row_level_name_when_mapping_level_is_blank() -> None:
@@ -110,5 +121,61 @@ def test_sync_event_key_uses_row_level_name_when_mapping_level_is_blank() -> Non
         saved = db.query(SourceEvent).one()
         expected_key = build_source_event_key("2026-2027", "Central High", "Football", "Varsity", normalized)
         assert saved.source_event_key == expected_key
+    finally:
+        db.close()
+
+
+def test_reconcile_missing_events_removes_stale_google_event() -> None:
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.db.session import Base
+    from app.models import GoogleCalendar, School, SchoolYear, SourceEvent, Sport, SyncedEvent, SyncRun
+
+    class FakeGateway:
+        def __init__(self):
+            self.deleted: list[tuple[str, str]] = []
+
+        def delete_event(self, calendar_id: str, event_id: str) -> None:
+            self.deleted.append((calendar_id, event_id))
+
+        def upsert_event(self, calendar_id: str, event_id: str | None, payload):
+            return event_id or "new-id"
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = Session(engine)
+    try:
+        school_year = SchoolYear(label="2026-2027")
+        school = School(name="Central High")
+        sport = Sport(name="Football", slug="football")
+        calendar = GoogleCalendar(display_name="Athletics", calendar_id="calendar@example.com")
+        mapping = SyncMapping(school_year=school_year, school=school, sport=sport, google_calendar=calendar)
+        db.add_all([school_year, school, sport, calendar, mapping])
+        db.commit()
+        db.refresh(mapping)
+
+        stale_event = SourceEvent(
+            mapping_id=mapping.id,
+            source_event_key="stale-key",
+            title="Football vs North",
+            last_seen_at=datetime(2026, 6, 1, 12, 0),
+        )
+        db.add(stale_event)
+        db.commit()
+        db.refresh(stale_event)
+        db.add(SyncedEvent(source_event_id=stale_event.id, google_event_id="google-1", calendar_id=calendar.calendar_id, fingerprint="fp"))
+        run = SyncRun(trigger="manual", status="running", started_at=datetime(2026, 6, 2, 12, 0))
+        db.add(run)
+        db.commit()
+        db.refresh(run)
+
+        gateway = FakeGateway()
+        service = SyncService(db)
+        service._reconcile_missing_events(run, mapping, gateway, AppSetting(cancellation_behavior="remove"))
+
+        assert gateway.deleted == [(calendar.calendar_id, "google-1")]
+        assert db.query(SourceEvent).count() == 0
+        assert run.removed_count == 1
     finally:
         db.close()

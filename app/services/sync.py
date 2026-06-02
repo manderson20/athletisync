@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import get_settings
-from app.integrations.mshsaa import MSHSAAClient, build_source_event_key
+from app.integrations.mshsaa import MSHSAAClient, build_source_event_key, parse_primary_schedule_date
 from app.models import AppSetting, SchoolYear, SourceEvent, SyncedEvent, SyncMapping, SyncRun, SyncRunItem
 from app.schemas import NormalizedEvent
 from app.services.google_calendar import (
@@ -46,9 +46,10 @@ class SyncService:
 
         for mapping in mappings:
             live_events = asyncio.run(self._fetch_mapping_events(mapping, settings))
+            mapping_gateway = self._gateway_for_mapping(mapping)
             for event in live_events:
-                mapping_gateway = self._gateway_for_mapping(mapping)
                 self._sync_event(run, mapping, event, mapping_gateway, settings)
+            self._reconcile_missing_events(run, mapping, mapping_gateway, settings)
 
         run.summary_json = {
             "last_completed_at": datetime.now(UTC).isoformat(),
@@ -196,16 +197,10 @@ class SyncService:
 
         school_year = school_year_label or current_school_year_label()
         start_year = int(school_year.split("-")[0])
-        primary_date = date_text.split("-", 1)[0].strip()
-        if not primary_date or "/" not in primary_date:
+        parsed_date = parse_primary_schedule_date(date_text)
+        if parsed_date is None:
             return None, None, True
-        if "/" not in primary_date:
-            return None, None, True
-        month_text, day_text = [part.strip() for part in primary_date.split("/", 1)]
-        if not month_text.isdigit() or not day_text.isdigit():
-            return None, None, True
-        month = int(month_text)
-        day = int(day_text)
+        month, day = parsed_date
         year = start_year if month >= 7 else start_year + 1
         tz = ZoneInfo(get_settings().timezone)
 
@@ -213,7 +208,7 @@ class SyncService:
         if time_text and any(token in time_text.upper() for token in ["AM", "PM"]):
             parsed_time = datetime.strptime(time_text.upper(), "%I:%M %p")
             start_at = datetime(year, month, day, parsed_time.hour, parsed_time.minute, tzinfo=tz)
-            return start_at, None, False
+            return start_at, start_at + timedelta(hours=2), False
 
         start_at = datetime(year, month, day, 0, 0, tzinfo=tz)
         return start_at, None, True
@@ -265,7 +260,8 @@ class SyncService:
 
         synced = self.db.scalar(select(SyncedEvent).where(SyncedEvent.source_event_id == source_event.id))
         before_fingerprint = synced.fingerprint if synced else None
-        fingerprint = event_fingerprint(source_event)
+        calendar_payload = build_event_payload(mapping, source_event, settings)
+        fingerprint = event_fingerprint(source_event, calendar_payload)
         action = "skipped"
 
         if not mapping.google_calendar:
@@ -275,11 +271,10 @@ class SyncService:
             run.skipped_count += 1
             message = f"{source_event.title} skipped because no changes were detected."
         else:
-            payload = build_event_payload(mapping, source_event, settings)
             google_id = gateway.upsert_event(
                 mapping.google_calendar.calendar_id,
                 synced.google_event_id if synced else None,
-                payload,
+                calendar_payload,
             )
             if synced is None:
                 synced = SyncedEvent(
@@ -309,6 +304,54 @@ class SyncService:
             )
         )
         self.db.commit()
+
+    def _reconcile_missing_events(self, run: SyncRun, mapping: SyncMapping, gateway, settings: AppSetting) -> None:
+        stale_events = self.db.scalars(
+            select(SourceEvent)
+            .options(joinedload(SourceEvent.synced_event))
+            .where(
+                SourceEvent.mapping_id == mapping.id,
+                SourceEvent.last_seen_at < run.started_at,
+            )
+        ).all()
+
+        for source_event in stale_events:
+            synced = source_event.synced_event
+            if synced is None or not mapping.google_calendar:
+                continue
+
+            if settings.cancellation_behavior == "remove":
+                gateway.delete_event(mapping.google_calendar.calendar_id, synced.google_event_id)
+                self.db.delete(synced)
+                self.db.delete(source_event)
+                run.removed_count += 1
+                action = "removed"
+                message = f"{source_event.title} removed because it no longer exists in MSHSAA."
+            else:
+                source_event.status = "cancelled"
+                payload = build_event_payload(mapping, source_event, settings)
+                google_id = gateway.upsert_event(
+                    mapping.google_calendar.calendar_id,
+                    synced.google_event_id,
+                    payload,
+                )
+                synced.google_event_id = google_id
+                synced.fingerprint = event_fingerprint(source_event, payload)
+                synced.last_synced_at = datetime.utcnow()
+                run.updated_count += 1
+                action = "updated"
+                message = f"{source_event.title} marked cancelled because it no longer exists in MSHSAA."
+
+            self.db.add(
+                SyncRunItem(
+                    sync_run_id=run.id,
+                    source_event_key=source_event.source_event_key,
+                    action=action,
+                    status="ok",
+                    message=message,
+                )
+            )
+            self.db.commit()
 
     def _participant_fields(self, opponent: str | None) -> tuple[str, str]:
         full_value = (opponent or "").strip()

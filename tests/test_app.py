@@ -63,6 +63,7 @@ def test_login_and_dashboard_access() -> None:
         assert response.status_code == 200
         assert "AthletiSync District" in response.text
         assert "Configured Mappings" in response.text
+        assert "Next scheduled sync at" in response.text
 
 
 def test_dashboard_requires_authentication() -> None:
@@ -232,6 +233,98 @@ def test_source_review_page_shows_mapping_actions() -> None:
         assert response.status_code == 200
         assert "Edit" in response.text
         assert "Delete" in response.text
+
+
+def test_schedule_preview_allows_mapping_when_activity_has_no_schedulable_rows(monkeypatch) -> None:
+    from app.db.session import SessionLocal
+    from app.models import School
+    from app.routes import schools as schools_routes
+
+    async def fake_fetch_activity_schedule(self, school_url, activity_id, year_value=None):
+        return {
+            "rows": [],
+            "schedule_url": "https://www.mshsaa.org/MySchool/Schedule.aspx?s=244&alg=19",
+            "school_year": "2026-2027",
+        }
+
+    monkeypatch.setattr(schools_routes.MSHSAAClient, "fetch_activity_schedule", fake_fetch_activity_schedule)
+
+    with build_test_client() as client:
+        login(client)
+
+        db = SessionLocal()
+        try:
+            school = School(name="Brookfield R-III High School", mshsaa_url="https://www.mshsaa.org/MySchool/?s=244")
+            db.add(school)
+            db.commit()
+            db.refresh(school)
+            school_id = school.id
+        finally:
+            db.close()
+
+        source_page = client.get(f"/schools/{school_id}/source")
+        csrf_token = extract_csrf(source_page.text)
+        response = client.post(
+            f"/schools/{school_id}/activities/19/schedule",
+            data={"csrf_token": csrf_token, "activity_name": "High School Football"},
+        )
+
+        assert response.status_code == 200
+        assert "You can still pair it to a Google Calendar now" in response.text
+        assert "No events are posted for this activity yet." in response.text
+        assert "Save Mapping" in response.text
+
+
+def test_save_mapping_allows_google_calendar_when_activity_has_no_schedulable_rows(monkeypatch) -> None:
+    from sqlalchemy import select
+
+    from app.db.session import SessionLocal
+    from app.models import GoogleCalendar, School, SchoolYear, SyncMapping
+
+    with build_test_client() as client:
+        login(client)
+
+        db = SessionLocal()
+        try:
+            automatic_year = db.scalar(select(SchoolYear).where(SchoolYear.label == "Automatic (Current and Future)"))
+            school = School(name="Brookfield R-III High School", mshsaa_url="https://www.mshsaa.org/MySchool/?s=244")
+            db.add(school)
+            calendar = GoogleCalendar(display_name="Athletics", calendar_id="athletics@example.com")
+            db.add(calendar)
+            db.commit()
+            db.refresh(school)
+            db.refresh(calendar)
+            school_id = school.id
+        finally:
+            db.close()
+
+        mappings_page = client.get("/mappings")
+        csrf_token = extract_csrf(mappings_page.text)
+        response = client.post(
+            "/mappings",
+            data={
+                "school_year_id": automatic_year.id,
+                "school_id": school_id,
+                "sport_name": "High School Football",
+                "google_calendar_id": calendar.id,
+                "source_activity_id": "19",
+                "source_activity_name": "High School Football",
+                "enabled": "on",
+                "sync_behavior": "standard",
+                "notes": "",
+                "csrf_token": csrf_token,
+            },
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+
+        db = SessionLocal()
+        try:
+            mapping = db.query(SyncMapping).one()
+            assert mapping.google_calendar_id == calendar.id
+        finally:
+            db.close()
 
 
 def test_google_page_shows_oauth_guidance() -> None:

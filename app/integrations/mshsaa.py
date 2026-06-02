@@ -28,30 +28,68 @@ class MSHSAAClient:
 
     async def fetch_activity_catalog(self, school_url: str) -> dict[str, Any]:
         html = await self.fetch_page(school_url)
+        year_options = self.parse_school_year_options(html)
         activities = self.parse_available_activities(html, school_url)
         if activities:
+            if not year_options:
+                year_options = await self.discover_year_options_from_activities(school_url, activities)
             return {
                 "activities": activities,
                 "school_year": self.parse_selected_school_year(html),
+                "available_school_years": [item["label"] for item in year_options],
+                "school_year_options": year_options,
                 "source_url": school_url,
             }
 
         schedule_url = self.discover_schedule_url(html, school_url)
         if schedule_url and schedule_url != school_url:
             schedule_html = await self.fetch_page(schedule_url)
+            year_options = self.parse_school_year_options(schedule_html)
+            parsed_activities = self.parse_available_activities(schedule_html, schedule_url)
+            if parsed_activities and not year_options:
+                year_options = await self.discover_year_options_from_activities(school_url, parsed_activities)
             return {
-                "activities": self.parse_available_activities(schedule_html, schedule_url),
+                "activities": parsed_activities,
                 "school_year": self.parse_selected_school_year(schedule_html),
+                "available_school_years": [item["label"] for item in year_options],
+                "school_year_options": year_options,
                 "source_url": schedule_url,
             }
-        return {"activities": activities, "school_year": None, "source_url": school_url}
+        return {
+            "activities": activities,
+            "school_year": None,
+            "available_school_years": [],
+            "school_year_options": [],
+            "source_url": school_url,
+        }
 
-    async def fetch_activity_schedule(self, school_url: str, activity_id: str) -> dict[str, Any]:
-        schedule_url = self.build_schedule_url(school_url, activity_id)
+    async def fetch_activity_schedule(self, school_url: str, activity_id: str, year_value: str | None = None) -> dict[str, Any]:
+        schedule_url = self.build_schedule_url(school_url, activity_id, year_value)
         html = await self.fetch_page(schedule_url)
         levels = self.parse_level_labels(html)
         rows = self.parse_schedule_rows(html, schedule_url, levels)
-        return {"schedule_url": schedule_url, "levels": levels, "rows": rows}
+        year_options = self.parse_school_year_options(html)
+        return {
+            "schedule_url": schedule_url,
+            "levels": levels,
+            "rows": rows,
+            "school_year": self.parse_selected_school_year(html),
+            "school_year_options": year_options,
+        }
+
+    async def discover_year_options_from_activities(self, school_url: str, activities: list[dict[str, str]]) -> list[dict[str, str]]:
+        discovered: list[dict[str, str]] = []
+        seen: set[tuple[str, str]] = set()
+        for activity in activities:
+            schedule = await self.fetch_activity_schedule(school_url, activity["external_id"])
+            for item in schedule.get("school_year_options", []):
+                key = (item["label"], item["value"])
+                if key not in seen:
+                    seen.add(key)
+                    discovered.append(item)
+            if discovered:
+                break
+        return discovered
 
     def parse_available_activities(self, html: str, base_url: str | None = None) -> list[dict[str, str]]:
         soup = BeautifulSoup(html, "html.parser")
@@ -127,12 +165,15 @@ class MSHSAAClient:
             return urljoin(school_url, f"/MySchool/Schedule.aspx?s={school_id}")
         return None
 
-    def build_schedule_url(self, school_url: str, activity_id: str) -> str:
+    def build_schedule_url(self, school_url: str, activity_id: str, year_value: str | None = None) -> str:
         parsed = urlparse(school_url)
         school_id = parse_qs(parsed.query).get("s", [None])[0]
         if not school_id:
             raise ValueError("Could not derive the MSHSAA school ID from the configured school URL.")
-        return urljoin(school_url, f"/MySchool/Schedule.aspx?s={school_id}&alg={activity_id}")
+        suffix = f"/MySchool/Schedule.aspx?s={school_id}&alg={activity_id}"
+        if year_value:
+            suffix += f"&year={year_value}"
+        return urljoin(school_url, suffix)
 
     def parse_level_labels(self, html: str) -> dict[str, str]:
         soup = BeautifulSoup(html, "html.parser")
@@ -156,6 +197,19 @@ class MSHSAAClient:
             return first_option.get_text(" ", strip=True)
         return None
 
+    def parse_available_school_years(self, html: str) -> list[str]:
+        return [item["label"] for item in self.parse_school_year_options(html)]
+
+    def parse_school_year_options(self, html: str) -> list[dict[str, str]]:
+        soup = BeautifulSoup(html, "html.parser")
+        options: list[dict[str, str]] = []
+        for option in soup.select("select[id$='drpYear'] option"):
+            label = option.get_text(" ", strip=True)
+            value = option.get("value", "").strip()
+            if label and value and {"label": label, "value": value} not in options:
+                options.append({"label": label, "value": value})
+        return options
+
     def parse_schedule_rows(
         self,
         html: str,
@@ -176,6 +230,7 @@ class MSHSAAClient:
             matchup_anchor = row.select_one("td[id$='tdMatchup'] a[href]")
             opponent_link = opponent_cell.select_one("a[href]") if opponent_cell else None
             level_id = row.get("data-level", "").strip()
+            matchup_url = urljoin(base_url, matchup_anchor.get("href")) if matchup_anchor else ""
 
             rows.append(
                 {
@@ -187,7 +242,8 @@ class MSHSAAClient:
                     "row_class": " ".join(row.get("class", [])),
                     "row_type": self._normalize_row_type(row.get("class", [])),
                     "opponent_url": urljoin(base_url, opponent_link.get("href")) if opponent_link else "",
-                    "matchup_url": urljoin(base_url, matchup_anchor.get("href")) if matchup_anchor else "",
+                    "matchup_url": matchup_url,
+                    "stable_reference": extract_stable_event_reference(matchup_url),
                 }
             )
         return rows
@@ -232,6 +288,11 @@ def build_source_event_key(
     level: str,
     event: NormalizedEvent,
 ) -> str:
+    stable_reference = extract_stable_event_reference(event.source_reference)
+    if stable_reference:
+        raw = "|".join([school_year, school, sport, level, stable_reference])
+        return sha256(raw.encode("utf-8")).hexdigest()
+
     raw = "|".join(
         [
             school_year,
@@ -248,6 +309,25 @@ def build_source_event_key(
     return sha256(raw.encode("utf-8")).hexdigest()
 
 
+def parse_primary_schedule_date(date_text: str | None) -> tuple[int, int] | None:
+    if not date_text:
+        return None
+
+    primary_date = date_text.split("-", 1)[0].strip()
+    if "/" not in primary_date:
+        return None
+
+    month_text, day_text = [part.strip() for part in primary_date.split("/", 1)]
+    if not month_text.isdigit() or not day_text.isdigit():
+        return None
+
+    return int(month_text), int(day_text)
+
+
+def row_has_schedulable_date(row: dict[str, str]) -> bool:
+    return parse_primary_schedule_date(row.get("date")) is not None
+
+
 def _parse_datetime(value: Any) -> datetime | None:
     if not value:
         return None
@@ -262,3 +342,20 @@ def _extract_alg_id(href: str) -> str | None:
     query = parse_qs(urlparse(href).query)
     alg = query.get("alg", [None])[0]
     return str(alg) if alg else None
+
+
+def extract_stable_event_reference(value: str | None) -> str | None:
+    if not value:
+        return None
+
+    parsed = urlparse(value)
+    query = parse_qs(parsed.query)
+    comp = query.get("comp", [None])[0]
+    if comp:
+        return f"comp:{comp}"
+
+    tournament = query.get("tournament", [None])[0]
+    if tournament:
+        return f"tournament:{tournament}"
+
+    return None

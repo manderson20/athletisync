@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from app.db.session import get_db
 from app.dependencies import require_user
@@ -16,6 +18,8 @@ def dashboard(request: Request, db: Session = Depends(get_db), _user=Depends(req
     settings = db.scalar(select(AppSetting)) or AppSetting()
     recent_runs = db.scalars(select(SyncRun).order_by(SyncRun.started_at.desc()).limit(5)).all()
     latest_run = recent_runs[0] if recent_runs else None
+    now_local = datetime.now(UTC).astimezone(ZoneInfo(settings.timezone))
+    next_poll_at = now_local + timedelta(minutes=settings.polling_interval_minutes)
     mappings = db.scalars(
         select(SyncMapping)
         .options(
@@ -36,6 +40,7 @@ def dashboard(request: Request, db: Session = Depends(get_db), _user=Depends(req
         "recent_runs": recent_runs,
         "latest_run": latest_run,
         "next_sync_minutes": settings.polling_interval_minutes,
+        "next_poll_at": next_poll_at.strftime("%Y-%m-%d %I:%M%p").replace(" 0", " "),
         "csrf_token": ensure_csrf_token(request),
     }
     return request.app.state.templates.TemplateResponse(request, "dashboard/index.html", context)
