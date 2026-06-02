@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.models import AppSetting, School, SchoolYear, Sport, SyncMapping
 from app.schemas import MappingFormData
 from app.services.sync import SyncService
@@ -55,3 +57,58 @@ def test_parse_row_datetime_skips_continuation_marker_rows() -> None:
     assert start_at is None
     assert end_at is None
     assert is_all_day is True
+
+
+def test_sync_event_key_uses_row_level_name_when_mapping_level_is_blank() -> None:
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    from app.db.session import Base
+    from app.integrations.mshsaa import build_source_event_key
+    from app.models import GoogleCalendar, School, SchoolYear, SourceEvent, Sport, SyncMapping
+    from app.schemas import NormalizedEvent
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    db = Session(engine)
+    try:
+        school_year = SchoolYear(label="2026-2027")
+        school = School(name="Central High")
+        sport = Sport(name="Football", slug="football")
+        calendar = GoogleCalendar(display_name="Athletics", calendar_id="calendar@example.com")
+        mapping = SyncMapping(school_year=school_year, school=school, sport=sport, google_calendar=calendar)
+        db.add_all([school_year, school, sport, calendar, mapping])
+        db.commit()
+        db.refresh(mapping)
+
+        service = SyncService(db)
+        run = __import__("app.models", fromlist=["SyncRun"]).SyncRun(trigger="manual", status="running")
+        db.add(run)
+        db.commit()
+        db.refresh(run)
+
+        normalized = NormalizedEvent(
+            school_year_label="2026-2027",
+            source_reference="ref-1",
+            title="Football vs North",
+            opponent="North",
+            start_at=datetime(2026, 9, 1, 18, 0),
+            end_at=datetime(2026, 9, 1, 20, 0),
+            payload={"level_name": "Varsity"},
+        )
+
+        service._sync_event(
+            run,
+            mapping,
+            normalized,
+            __import__("app.services.google_calendar", fromlist=["DryRunCalendarGateway"]).DryRunCalendarGateway(),
+            AppSetting(
+                event_title_template="{sport} {level} vs {opponent}",
+                event_description_template="Opponent: {opponent}",
+            ),
+        )
+        saved = db.query(SourceEvent).one()
+        expected_key = build_source_event_key("2026-2027", "Central High", "Football", "Varsity", normalized)
+        assert saved.source_event_key == expected_key
+    finally:
+        db.close()

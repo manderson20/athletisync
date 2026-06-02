@@ -168,12 +168,16 @@ def event_fingerprint(source_event: SourceEvent) -> str:
 
 def build_event_payload(mapping: SyncMapping, source_event: SourceEvent, settings: AppSetting | str) -> CalendarEventPayload:
     context = build_format_context(mapping, source_event)
+    timezone_name = None
     if isinstance(settings, AppSetting):
         title_template, description_template = resolve_templates(settings, mapping)
+        timezone_name = settings.timezone
     else:
         payload = source_event.payload if isinstance(source_event.payload, dict) else {}
         title_template = payload.get("event_title_template") or source_event.title
         description_template = settings
+        if source_event.start_at and source_event.start_at.tzinfo is not None:
+            timezone_name = getattr(source_event.start_at.tzinfo, "key", None) or str(source_event.start_at.tzinfo)
     description = render_template(description_template, context)
     summary = render_template(title_template or "{sport}", context)
     if source_event.is_all_day:
@@ -182,6 +186,11 @@ def build_event_payload(mapping: SyncMapping, source_event: SourceEvent, setting
     else:
         start = {"dateTime": source_event.start_at.isoformat()} if source_event.start_at else {}
         end = {"dateTime": (source_event.end_at or source_event.start_at).isoformat()} if source_event.start_at else {}
+        if timezone_name:
+            if start:
+                start["timeZone"] = timezone_name
+            if end:
+                end["timeZone"] = timezone_name
 
     status = "cancelled" if source_event.status == "cancelled" else "confirmed"
     return CalendarEventPayload(

@@ -177,6 +177,7 @@ class SyncService:
                 "activity_name": activity["name"],
                 "activity_id": activity["external_id"],
                 "row_type": row.get("row_type"),
+                "level_name": row.get("level_name"),
                 "primary_opponent": primary_opponent,
                 "participants": participants,
                 "matchup_url": row.get("matchup_url"),
@@ -225,11 +226,13 @@ class SyncService:
         gateway,
         settings: AppSetting,
     ) -> None:
+        payload = normalized.payload if isinstance(normalized.payload, dict) else {}
+        effective_level = payload.get("level_name") or (mapping.level.name if mapping.level else "general")
         key = build_source_event_key(
             self._effective_school_year_label(mapping, normalized.school_year_label),
             mapping.school.name,
             mapping.sport.name if mapping.sport else "general",
-            mapping.level.name if mapping.level else "general",
+            effective_level,
             normalized,
         )
         source_event = self.db.scalar(select(SourceEvent).where(SourceEvent.source_event_key == key))

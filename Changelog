@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.24 - 2026-06-02
+
+- Fixed Google Calendar timed event payloads to include a time zone, resolving Google API failures such as `Missing time zone definition for start time`.
+- Updated sync formatting and event identity to use the row-level MSHSAA level name when a mapping is broad, so titles can show values like `Varsity`, `JV`, or `Middle` instead of the fallback `General`.
+
 ## 0.1.23 - 2026-06-02
 
 - Fixed sync date parsing for MSHSAA rows that use ranged date text such as `5/31-12/6`, preventing `Sync Now` from crashing on those schedule formats.
