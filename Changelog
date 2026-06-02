@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.31 - 2026-06-02
+
+- Removed the Google OAuth client-secret field from the UI so AthletiSync no longer round-trips that secret through the web form.
+- Updated Google OAuth runtime lookup to prefer the server environment variable `GOOGLE_OAUTH_CLIENT_SECRET` while keeping a legacy database fallback so existing installs continue working during migration.
+- Updated the Google setup instructions to point admins to server-side secret configuration instead of storing the client secret in the app UI.
+
 ## 0.1.30 - 2026-06-02
 
 - Normalized calendar-event level labels so `Junior High` renders as `Middle School` and `Junior Varsity` renders as `JV` in Google event titles and details.

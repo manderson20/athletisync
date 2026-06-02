@@ -52,7 +52,7 @@ def get_google_app_settings(db: Session) -> AppSetting:
 def google_oauth_ready(app_settings: AppSetting, request: Request) -> bool:
     settings = request.app.state.settings
     client_id = app_settings.google_oauth_client_id or settings.google_oauth_client_id
-    client_secret = app_settings.google_oauth_client_secret or settings.google_oauth_client_secret
+    client_secret = settings.google_oauth_client_secret or app_settings.google_oauth_client_secret
     return bool(client_id and client_secret)
 
 
@@ -82,7 +82,6 @@ def google_page(request: Request, db: Session = Depends(get_db), _user=Depends(r
 def save_google_oauth_config(
     request: Request,
     google_oauth_client_id: str = Form(default=""),
-    google_oauth_client_secret: str = Form(default=""),
     google_oauth_redirect_uri: str = Form(default=""),
     csrf_token: str = Form(...),
     db: Session = Depends(get_db),
@@ -94,7 +93,6 @@ def save_google_oauth_config(
         settings = AppSetting()
         db.add(settings)
     settings.google_oauth_client_id = (google_oauth_client_id or "").strip() or None
-    settings.google_oauth_client_secret = (google_oauth_client_secret or "").strip() or None
     settings.google_oauth_redirect_uri = (google_oauth_redirect_uri or "").strip() or None
     db.commit()
     set_google_banner(request, "success", "Saved Google OAuth configuration.")

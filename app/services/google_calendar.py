@@ -61,8 +61,8 @@ class GoogleCalendarGateway:
 
     def _oauth_client_secret(self) -> str | None:
         return (
-            (self.app_settings.google_oauth_client_secret if self.app_settings else None)
-            or self.settings.google_oauth_client_secret
+            self.settings.google_oauth_client_secret
+            or (self.app_settings.google_oauth_client_secret if self.app_settings else None)
         )
 
     def _build_service(self):

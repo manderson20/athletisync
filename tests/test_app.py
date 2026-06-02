@@ -529,7 +529,6 @@ def test_can_save_google_oauth_settings_on_google_page() -> None:
             "/google/oauth/config",
             data={
                 "google_oauth_client_id": "ui-client-id",
-                "google_oauth_client_secret": "ui-client-secret",
                 "google_oauth_redirect_uri": "http://testserver/google/oauth/callback",
                 "csrf_token": settings_csrf,
             },
@@ -543,10 +542,34 @@ def test_can_save_google_oauth_settings_on_google_page() -> None:
             settings = db.scalar(select(AppSetting))
             assert settings is not None
             assert settings.google_oauth_client_id == "ui-client-id"
-            assert settings.google_oauth_client_secret == "ui-client-secret"
             assert settings.google_oauth_redirect_uri == "http://testserver/google/oauth/callback"
         finally:
             db.close()
+
+
+def test_google_page_does_not_round_trip_client_secret_from_ui() -> None:
+    from sqlalchemy import select
+
+    from app.db.session import SessionLocal
+    from app.models import AppSetting
+
+    db = SessionLocal()
+    try:
+        settings = db.scalar(select(AppSetting))
+        if settings is None:
+            settings = AppSetting()
+            db.add(settings)
+        settings.google_oauth_client_secret = "legacy-db-secret"
+        db.commit()
+    finally:
+        db.close()
+
+    with build_test_client() as client:
+        login(client)
+        response = client.get("/google")
+        assert response.status_code == 200
+        assert 'name="google_oauth_client_secret"' not in response.text
+        assert "GOOGLE_OAUTH_CLIENT_SECRET" in response.text
 
 
 def test_calendar_access_test_requires_auth_profile() -> None:
