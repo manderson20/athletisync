@@ -95,7 +95,7 @@
 <section class="card">
   <h3>Configured Profiles</h3>
   <table>
-    <thead><tr><th>Name</th><th>Account</th><th>Connection</th></tr></thead>
+    <thead><tr><th>Name</th><th>Account</th><th>Connection</th><th>Remove</th></tr></thead>
     <tbody>
       {% for profile in profiles %}
       <tr>
@@ -110,9 +110,15 @@
             hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
           >Test</button>
         </td>
+        <td>
+          <form method="post" action="/google/profiles/{{ profile.id }}/delete" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="button secondary" type="submit">Remove</button>
+          </form>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="3">No auth profiles configured.</td></tr>
+      <tr><td colspan="4">No auth profiles configured.</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -121,7 +127,7 @@
 <section class="card">
   <h3>Configured Calendars</h3>
   <table>
-    <thead><tr><th>Name</th><th>Calendar ID</th><th>Profile</th><th>Access</th></tr></thead>
+    <thead><tr><th>Name</th><th>Calendar ID</th><th>Profile</th><th>Access</th><th>Remove</th></tr></thead>
     <tbody>
       {% for item in calendars %}
       <tr>
@@ -137,9 +143,15 @@
             hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
           >Test Calendar Access</button>
         </td>
+        <td>
+          <form method="post" action="/google/calendars/{{ item.id }}/delete" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="button secondary" type="submit">Remove</button>
+          </form>
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="4">No calendars configured.</td></tr>
+      <tr><td colspan="5">No calendars configured.</td></tr>
       {% endfor %}
     </tbody>
   </table>

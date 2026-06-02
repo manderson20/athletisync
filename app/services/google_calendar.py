@@ -123,7 +123,13 @@ class GoogleCalendarGateway:
             "status": payload.status,
         }
         if event_id:
-            result = service.events().update(calendarId=calendar_id, eventId=event_id, body=body).execute()
+            try:
+                result = service.events().update(calendarId=calendar_id, eventId=event_id, body=body).execute()
+            except Exception as exc:
+                if HttpError is not None and isinstance(exc, HttpError) and exc.resp.status in {404, 410}:
+                    result = service.events().insert(calendarId=calendar_id, body=body).execute()
+                else:
+                    raise
         else:
             result = service.events().insert(calendarId=calendar_id, body=body).execute()
         return result["id"]

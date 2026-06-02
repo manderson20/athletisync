@@ -343,6 +343,110 @@ def test_google_page_shows_oauth_guidance() -> None:
         assert "Authorized Redirect URI" in response.text
 
 
+def test_can_remove_google_calendar_destination() -> None:
+    from app.db.session import SessionLocal
+    from app.models import GoogleCalendar
+
+    with build_test_client() as client:
+        login(client)
+        db = SessionLocal()
+        try:
+            calendar = GoogleCalendar(display_name="Test Calendar", calendar_id="test-calendar@example.com")
+            db.add(calendar)
+            db.commit()
+            db.refresh(calendar)
+            calendar_id = calendar.id
+        finally:
+            db.close()
+
+        google_page = client.get("/google")
+        csrf_token = extract_csrf(google_page.text)
+        response = client.post(
+            f"/google/calendars/{calendar_id}/delete",
+            data={"csrf_token": csrf_token},
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert "Removed calendar destination: Test Calendar." in response.text
+
+        db = SessionLocal()
+        try:
+            assert db.get(GoogleCalendar, calendar_id) is None
+        finally:
+            db.close()
+
+
+def test_can_remove_google_auth_profile_when_unused() -> None:
+    from app.db.session import SessionLocal
+    from app.models import GoogleAuthProfile
+
+    with build_test_client() as client:
+        login(client)
+        db = SessionLocal()
+        try:
+            profile = GoogleAuthProfile(name="Test Profile", auth_type="oauth")
+            db.add(profile)
+            db.commit()
+            db.refresh(profile)
+            profile_id = profile.id
+        finally:
+            db.close()
+
+        google_page = client.get("/google")
+        csrf_token = extract_csrf(google_page.text)
+        response = client.post(
+            f"/google/profiles/{profile_id}/delete",
+            data={"csrf_token": csrf_token},
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert "Removed auth profile: Test Profile." in response.text
+
+        db = SessionLocal()
+        try:
+            assert db.get(GoogleAuthProfile, profile_id) is None
+        finally:
+            db.close()
+
+
+def test_cannot_remove_google_auth_profile_while_calendars_still_use_it() -> None:
+    from app.db.session import SessionLocal
+    from app.models import GoogleAuthProfile, GoogleCalendar
+
+    with build_test_client() as client:
+        login(client)
+        db = SessionLocal()
+        try:
+            profile = GoogleAuthProfile(name="In Use Profile", auth_type="oauth")
+            db.add(profile)
+            db.commit()
+            db.refresh(profile)
+            db.add(
+                GoogleCalendar(
+                    display_name="Used Calendar",
+                    calendar_id="used-calendar@example.com",
+                    auth_profile_id=profile.id,
+                )
+            )
+            db.commit()
+            profile_id = profile.id
+        finally:
+            db.close()
+
+        google_page = client.get("/google")
+        csrf_token = extract_csrf(google_page.text)
+        response = client.post(
+            f"/google/profiles/{profile_id}/delete",
+            data={"csrf_token": csrf_token},
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+        assert "This auth profile is still assigned to one or more calendar destinations." in response.text
+
+
 def test_google_page_uses_server_base_url_for_redirect_hint() -> None:
     with build_test_client() as client:
         login(client)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.29 - 2026-06-02
+
+- Fixed Google sync recovery when an existing stored Google event ID has already been deleted remotely by falling back from update to insert on `404` or `410` responses.
+- Added remove actions on the Google page so admins can delete unused calendar destinations and auth profiles from the UI.
+- Added dependency guards so auth profiles cannot be removed while calendars still reference them, and calendars cannot be removed while mappings still use them.
+
 ## 0.1.28 - 2026-06-02
 
 - Updated the dashboard to show the actual next scheduled poll time instead of only an approximate minute interval.

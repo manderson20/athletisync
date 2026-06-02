@@ -253,6 +253,60 @@ def create_calendar(
     return RedirectResponse("/google", status_code=303)
 
 
+@router.post("/calendars/{calendar_id}/delete")
+def delete_calendar(
+    calendar_id: int,
+    request: Request,
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    _user=Depends(require_user),
+):
+    verify_csrf(request, csrf_token)
+    calendar = db.get(GoogleCalendar, calendar_id)
+    if not calendar:
+        set_google_banner(request, "error", "Calendar destination not found.")
+        return RedirectResponse("/google", status_code=303)
+    if calendar.mappings:
+        set_google_banner(
+            request,
+            "error",
+            "This calendar destination is still assigned to one or more mappings. Remove those assignments first.",
+        )
+        return RedirectResponse("/google", status_code=303)
+    display_name = calendar.display_name
+    db.delete(calendar)
+    db.commit()
+    set_google_banner(request, "success", f"Removed calendar destination: {display_name}.")
+    return RedirectResponse("/google", status_code=303)
+
+
+@router.post("/profiles/{profile_id}/delete")
+def delete_profile(
+    profile_id: int,
+    request: Request,
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    _user=Depends(require_user),
+):
+    verify_csrf(request, csrf_token)
+    profile = db.get(GoogleAuthProfile, profile_id)
+    if not profile:
+        set_google_banner(request, "error", "Google auth profile not found.")
+        return RedirectResponse("/google", status_code=303)
+    if profile.calendars:
+        set_google_banner(
+            request,
+            "error",
+            "This auth profile is still assigned to one or more calendar destinations. Remove those calendars first.",
+        )
+        return RedirectResponse("/google", status_code=303)
+    profile_name = profile.name
+    db.delete(profile)
+    db.commit()
+    set_google_banner(request, "success", f"Removed auth profile: {profile_name}.")
+    return RedirectResponse("/google", status_code=303)
+
+
 @router.post("/profiles/{profile_id}/test", response_class=HTMLResponse)
 def test_profile(profile_id: int, request: Request, db: Session = Depends(get_db), _user=Depends(require_user)):
     verify_csrf(request, request.headers.get("X-CSRF-Token"))
