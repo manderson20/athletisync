@@ -45,7 +45,7 @@ class SyncService:
         ).all()
 
         for mapping in mappings:
-            live_events = asyncio.run(self._fetch_mapping_events(mapping))
+            live_events = asyncio.run(self._fetch_mapping_events(mapping, settings))
             for event in live_events:
                 mapping_gateway = self._gateway_for_mapping(mapping)
                 self._sync_event(run, mapping, event, mapping_gateway, settings)
@@ -60,12 +60,12 @@ class SyncService:
         self.db.refresh(run)
         return run
 
-    async def _fetch_mapping_events(self, mapping: SyncMapping) -> list[NormalizedEvent]:
+    async def _fetch_mapping_events(self, mapping: SyncMapping, app_settings: AppSetting) -> list[NormalizedEvent]:
         if not mapping.school.mshsaa_url or not mapping.sport:
             return []
 
-        settings = get_settings()
-        client = MSHSAAClient(settings)
+        runtime_settings = get_settings()
+        client = MSHSAAClient(runtime_settings)
         catalog = await client.fetch_activity_catalog(mapping.school.mshsaa_url)
         discover_and_ensure_school_years(self.db, catalog.get("available_school_years", []))
 
@@ -100,7 +100,13 @@ class SyncService:
                 for row in schedule["rows"]:
                     if mapping.level and row["level_name"] != mapping.level.name:
                         continue
-                    normalized = self._normalized_event_from_row(mapping, activity, row, schedule.get("school_year"), settings.event_title_template)
+                    normalized = self._normalized_event_from_row(
+                        mapping,
+                        activity,
+                        row,
+                        schedule.get("school_year"),
+                        app_settings.event_title_template,
+                    )
                     if normalized:
                         events.append(normalized)
         return events

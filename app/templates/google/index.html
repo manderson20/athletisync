@@ -85,6 +85,8 @@
           {% for item in profiles %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
         </select>
       </label>
+      <p class="muted">Calendar ID is not usually the visible calendar name. In Google Calendar, open the target calendar's <strong>Settings and sharing</strong> page, scroll to <strong>Integrate calendar</strong>, and copy the exact <strong>Calendar ID</strong> from there.</p>
+      <p class="muted">Examples: a primary calendar may use an address like <code>yourname@gmail.com</code>. A shared or secondary calendar often looks like <code>abcd1234@group.calendar.google.com</code>.</p>
       <p class="muted">This creates the actual destination calendar record AthletiSync will sync into.</p>
       <button class="button" type="submit">Save Calendar Destination</button>
     </form>
