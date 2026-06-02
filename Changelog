@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.23 - 2026-06-02
+
+- Fixed sync date parsing for MSHSAA rows that use ranged date text such as `5/31-12/6`, preventing `Sync Now` from crashing on those schedule formats.
+- Kept the visible sidebar version moving forward so admins can confirm whether the running UI includes the latest sync and Google integration fixes.
+
+## 0.1.22 - 2026-06-02
+
+- Added a deployment helper that updates AthletiSync `Server Base URL` in the SQLite database automatically during the HTTPS/Let's Encrypt setup flow.
+- Updated the HTTPS enablement script so a single command can issue the certificate, configure nginx, and align the app's base URL with the final HTTPS domain.
+
 ## 0.1.21 - 2026-06-02
 
 - Added copy-ready Google OAuth values on the Google page for both `Authorized JavaScript origin` and `Authorized redirect URI`, so admins can paste the exact correct entries into Google Cloud.

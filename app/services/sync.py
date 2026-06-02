@@ -195,7 +195,10 @@ class SyncService:
 
         school_year = school_year_label or current_school_year_label()
         start_year = int(school_year.split("-")[0])
-        month_text, day_text = [part.strip() for part in date_text.split("/", 1)]
+        primary_date = date_text.split("-", 1)[0].strip()
+        if "/" not in primary_date:
+            return None, None, True
+        month_text, day_text = [part.strip() for part in primary_date.split("/", 1)]
         month = int(month_text)
         day = int(day_text)
         year = start_year if month >= 7 else start_year + 1

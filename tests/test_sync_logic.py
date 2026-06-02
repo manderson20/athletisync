@@ -38,3 +38,12 @@ def test_fetch_mapping_events_uses_app_setting_title_template(monkeypatch) -> No
     events = __import__("asyncio").run(service._fetch_mapping_events(mapping, settings))
     assert len(events) == 1
     assert events[0].payload["event_title_template"] == "{school} {sport}"
+
+
+def test_parse_row_datetime_accepts_ranged_date_text() -> None:
+    service = SyncService(db=None)  # type: ignore[arg-type]
+    start_at, end_at, is_all_day = service._parse_row_datetime("5/31-12/6", "7:00 PM", "2026-2027")
+    assert start_at is not None
+    assert start_at.month == 5
+    assert start_at.day == 31
+    assert is_all_day is False
