@@ -385,7 +385,11 @@ def test_google_oauth_start_and_callback_preserve_code_verifier(monkeypatch) -> 
     class FakeCredentials:
         token = "access-token"
         refresh_token = "refresh-token"
-        scopes = ["https://www.googleapis.com/auth/calendar", "openid", "email"]
+        scopes = [
+            "https://www.googleapis.com/auth/calendar",
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+        ]
 
     class FakeFlow:
         def __init__(self, *, state=None, redirect_uri=None, code_verifier=None):

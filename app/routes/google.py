@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover - optional dependency
 
 router = APIRouter(prefix="/google", tags=["google"])
 GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar"
+GOOGLE_USERINFO_EMAIL_SCOPE = "https://www.googleapis.com/auth/userinfo.email"
 
 
 def pop_google_banner(request: Request) -> dict | None:
@@ -137,7 +138,7 @@ def start_google_oauth(
                 "token_uri": "https://oauth2.googleapis.com/token",
             }
         },
-        scopes=[GOOGLE_CALENDAR_SCOPE, "openid", "email"],
+        scopes=[GOOGLE_CALENDAR_SCOPE, "openid", GOOGLE_USERINFO_EMAIL_SCOPE],
         state=state,
         redirect_uri=google_oauth_redirect_uri(request),
     )
@@ -191,7 +192,7 @@ def google_oauth_callback(
                 "token_uri": "https://oauth2.googleapis.com/token",
             }
         },
-        scopes=[GOOGLE_CALENDAR_SCOPE, "openid", "email"],
+        scopes=[GOOGLE_CALENDAR_SCOPE, "openid", GOOGLE_USERINFO_EMAIL_SCOPE],
         state=state,
         redirect_uri=google_oauth_redirect_uri(request),
         code_verifier=code_verifier,
